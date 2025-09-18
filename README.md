@@ -1,4 +1,4 @@
-## Description
+## EXIT 8 WEBXR
 
 This project is a **WebXR recreation of Exit 8**, a short Japanese indie horror/walking-simulator game. The core idea is navigating a repeating, looping underground passageway. Each loop looks nearly identical, but there are subtle differences in objects, characters, or signs.
 
