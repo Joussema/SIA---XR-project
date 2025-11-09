@@ -80,7 +80,7 @@ export function updateMovement() {
 
   // --- Desktop WASD movement ---
   if (!renderer.xr.isPresenting) {
-    if (keys['w'] || keys['arrowup']) moveTarget.position.addScaledVector(forward, moveSpeed);
+    if (keys['z'] || keys['arrowup']) moveTarget.position.addScaledVector(forward, moveSpeed);
     if (keys['s'] || keys['arrowdown']) moveTarget.position.addScaledVector(forward, -moveSpeed);
     if (keys['a'] || keys['arrowleft']) moveTarget.position.addScaledVector(right, -moveSpeed);
     if (keys['d'] || keys['arrowright']) moveTarget.position.addScaledVector(right, moveSpeed);
