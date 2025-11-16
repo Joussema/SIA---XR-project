@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { VRButton } from 'three/addons/webxr/VRButton.js';
-
+//f
 export let scene, camera, renderer;
 
 export function initScene() {
@@ -9,7 +9,12 @@ export function initScene() {
   scene.fog = new THREE.Fog(0x222222, 1, 100);
 
   // Camera
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+  );
   camera.position.set(0, 0, 1);
 
   // Renderer
@@ -19,26 +24,67 @@ export function initScene() {
   document.body.appendChild(renderer.domElement);
   document.body.appendChild(VRButton.createButton(renderer));
 
-  // Resize handling
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
+  // Resize handling (use shared handler)
+  window.addEventListener('resize', onWindowResize);
+
+  // Lights (from file 1)
+  const light = new THREE.DirectionalLight(0xffffff, 1);
+  light.position.set(2, 2, 5);
+  scene.add(light);
+
+  const light2 = new THREE.PointLight(0xffffff, 3);
+  light2.position.set(0, 0, 0);
+  scene.add(light2);
+
+  const light3 = new THREE.PointLight(0xffffff, 3);
+  light3.position.set(0, 0, -3);
+  scene.add(light3);
+
+  //--------Axis and Grid Debuggers (from file 1)------
+  const axesHelper = new THREE.AxesHelper(22);
+  scene.add(axesHelper);
+
+  const GridHelpersize = 200;
+  const Gridhelperdivisions = 200;
+  const gridHelper = new THREE.GridHelper(
+    GridHelpersize,
+    Gridhelperdivisions
+  );
+  scene.add(gridHelper);
+
+  const GridHelpersize2 = 200;
+  const Gridhelperdivisions2 = 20;
+  const gridHelper2 = new THREE.GridHelper(
+    GridHelpersize2,
+    Gridhelperdivisions2,
+    0x000000,
+    0x000000
+  );
+  scene.add(gridHelper2);
 }
 
-
-
 //////////////////////////////////////
-
 
 const keys = {};
 let moveSpeed = 0.05;
 
 // Setup keyboard + mouse controls
 export function setupControls() {
-  document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
-  document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+  document.addEventListener(
+    'keydown',
+    (e) => (keys[e.key.toLowerCase()] = true)
+  );
+  document.addEventListener(
+    'keyup',
+    (e) => (keys[e.key.toLowerCase()] = false)
+  );
+
+  if (!renderer) {
+    console.warn(
+      'setupControls() called before initScene(). Call initScene() first.'
+    );
+    return;
+  }
 
   // Demander le pointer lock quand on clique sur le canvas
   renderer.domElement.addEventListener('click', () => {
@@ -60,40 +106,66 @@ export function setupControls() {
     if (!renderer.xr.isPresenting) {
       // Utiliser les mouvements relatifs (movementX/Y) au lieu de la position absolue
       const sensitivity = 0.002;
-      
+
       camera.rotation.y -= e.movementX * sensitivity;
       camera.rotation.x -= e.movementY * sensitivity;
 
       // Limiter la rotation verticale pour éviter de se retourner
-      camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
+      camera.rotation.x = Math.max(
+        -Math.PI / 2,
+        Math.min(Math.PI / 2, camera.rotation.x)
+      );
     }
   }
 }
 
 // Update movement every frame
 export function updateMovement() {
-  const moveTarget = renderer.xr.isPresenting ? dolly : camera;
-  
+  if (!renderer || !camera) return;
+
+  const moveTarget =
+    renderer.xr.isPresenting && dolly ? dolly : camera;
+
   // TOUJOURS utiliser la direction de la CAMÉRA pour le mouvement
   const cameraWorldDirection = new THREE.Vector3();
   camera.getWorldDirection(cameraWorldDirection);
-  
+
   // Mouvement horizontal seulement (Y = 0)
-  const forward = new THREE.Vector3(cameraWorldDirection.x, 0, cameraWorldDirection.z).normalize();
-  const right = new THREE.Vector3(forward.z, 0, -forward.x).normalize(); // Perpendiculaire à forward
+  const forward = new THREE.Vector3(
+    cameraWorldDirection.x,
+    0,
+    cameraWorldDirection.z
+  ).normalize();
+  const right = new THREE.Vector3(
+    forward.z,
+    0,
+    -forward.x
+  ).normalize(); // Perpendiculaire à forward
 
   // --- VR movement (controller thumbstick) ---
-  if (renderer.xr.isPresenting && controller1) {
+  if (renderer.xr.isPresenting && controller1 && dolly) {
     const session = renderer.xr.getSession();
     if (session) {
       for (const inputSource of session.inputSources) {
         const gamepad = inputSource.gamepad;
         if (gamepad && gamepad.axes.length >= 4) {
-          const [axisX, axisY] = [gamepad.axes[2] || gamepad.axes[0], gamepad.axes[3] || gamepad.axes[1]];
-          if (Math.abs(axisX) > 0.1 || Math.abs(axisY) > 0.1) {
+          const [axisX, axisY] = [
+            gamepad.axes[2] || gamepad.axes[0],
+            gamepad.axes[3] || gamepad.axes[1],
+          ];
+          if (
+            Math.abs(axisX) > 0.1 ||
+            Math.abs(axisY) > 0.1
+          ) {
             // MAINTENANT: Tous les mouvements sont relatifs à la direction de la tête
-            dolly.position.addScaledVector(forward, -axisY * moveSpeed); // Avant/arrière
-            dolly.position.addScaledVector(right, -axisX * moveSpeed);    // Gauche/droite
+            dolly.position.addScaledVector(
+              forward,
+              -axisY * moveSpeed
+            ); // Avant/arrière
+            dolly.position.addScaledVector(
+              right,
+              -axisX * moveSpeed
+            ); // Gauche/droite
           }
         }
       }
@@ -102,10 +174,14 @@ export function updateMovement() {
 
   // --- Desktop WASD movement ---
   if (!renderer.xr.isPresenting) {
-    if (keys['z'] || keys['arrowup']) moveTarget.position.addScaledVector(forward, moveSpeed);
-    if (keys['s'] || keys['arrowdown']) moveTarget.position.addScaledVector(forward, -moveSpeed);
-    if (keys['d'] || keys['arrowleft']) moveTarget.position.addScaledVector(right, moveSpeed);
-    if (keys['q'] || keys['arrowright']) moveTarget.position.addScaledVector(right, -moveSpeed);
+    if (keys['z'] || keys['arrowup'])
+      moveTarget.position.addScaledVector(forward, moveSpeed);
+    if (keys['s'] || keys['arrowdown'])
+      moveTarget.position.addScaledVector(forward, -moveSpeed);
+    if (keys['q'] || keys['arrowleft'])
+      moveTarget.position.addScaledVector(right, moveSpeed);
+    if (keys['d'] || keys['arrowright'])
+      moveTarget.position.addScaledVector(right, -moveSpeed);
     if (keys[' ']) moveTarget.position.y += moveSpeed;
     if (keys['shift']) moveTarget.position.y -= moveSpeed;
   }
@@ -118,11 +194,20 @@ export let dolly;
 
 export async function onButtonClicked() {
   try {
-    const session = await navigator.xr.requestSession('immersive-vr', {
-      optionalFeatures: ['local-floor', 'hand-tracking']
-    });
+    if (!navigator.xr) {
+      throw new Error('WebXR not supported in this browser');
+    }
 
-    session.addEventListener('end', () => console.log('VR session ended'));
+    const session = await navigator.xr.requestSession(
+      'immersive-vr',
+      {
+        optionalFeatures: ['local-floor', 'hand-tracking'],
+      }
+    );
+
+    session.addEventListener('end', () =>
+      console.log('VR session ended')
+    );
     await renderer.xr.setSession(session);
   } catch (error) {
     console.error('Error starting VR session:', error);
@@ -131,6 +216,13 @@ export async function onButtonClicked() {
 }
 
 export function setupVRControllers() {
+  if (!renderer || !scene || !camera) {
+    console.warn(
+      'setupVRControllers() called before initScene(). Call initScene() first.'
+    );
+    return;
+  }
+
   // Dolly (camera rig)
   dolly = new THREE.Group();
   dolly.position.set(0, -1.2, 0);
@@ -142,8 +234,14 @@ export function setupVRControllers() {
     const controller = renderer.xr.getController(index);
     controller.addEventListener('selectstart', onSelectStart);
     controller.addEventListener('selectend', onSelectEnd);
-    controller.addEventListener('connected', (event) => controller.add(buildController(event.data)));
-    controller.addEventListener('disconnected', function() { this.remove(this.children[0]); });
+    controller.addEventListener('connected', (event) =>
+      controller.add(buildController(event.data))
+    );
+    controller.addEventListener('disconnected', function () {
+      if (this.children[0]) {
+        this.remove(this.children[0]);
+      }
+    });
     dolly.add(controller);
     return controller;
   }
@@ -156,15 +254,27 @@ export function buildController(data) {
   let geometry, material;
   if (data.targetRayMode === 'tracked-pointer') {
     geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, -1], 3));
+    geometry.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, -1], 3)
+    );
     material = new THREE.LineBasicMaterial({ color: 0xffffff });
     return new THREE.Line(geometry, material);
   }
   if (data.targetRayMode === 'gaze') {
-    geometry = new THREE.RingGeometry(0.02, 0.04, 32).translate(0, 0, -1);
-    material = new THREE.MeshBasicMaterial({ opacity: 0.5, transparent: true });
+    geometry = new THREE.RingGeometry(0.02, 0.04, 32).translate(
+      0,
+      0,
+      -1
+    );
+    material = new THREE.MeshBasicMaterial({
+      opacity: 0.5,
+      transparent: true,
+    });
     return new THREE.Mesh(geometry, material);
   }
+
+  return null;
 }
 
 export function onSelectStart(event) {
@@ -174,8 +284,11 @@ export function onSelectStart(event) {
 export function onSelectEnd(event) {
   event.target.userData.isSelecting = false;
 }
+
 export function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+  if (!camera || !renderer) return;
+
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
 }

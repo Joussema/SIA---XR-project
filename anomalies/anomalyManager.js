@@ -6,7 +6,7 @@ let lastSpawnTime = 0;
 const ANOMALY_PERIOD = 10000; // every 10 seconds
 
 // === MANUAL CONFIGURATION - SET THESE VALUES ===
-const MANUAL_EVENT = "DIRE_STONE"; // Change to: "DIRE_STONE", "FIRE_BLOCKADE", "DEMON", "VOID"
+const MANUAL_EVENT = "DEMON"; // Change to: "DIRE_STONE", "FIRE_BLOCKADE", "DEMON", "VOID"
 const MANUAL_STONE_POSITION = new THREE.Vector3(0, -1,-3); // Set your desired position here (x, y, z)
 // ==============================================
 

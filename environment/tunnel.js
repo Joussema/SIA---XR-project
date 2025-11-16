@@ -1,11 +1,11 @@
-// Tunnel loader and tiling logic.
+// Tunnel loader and tiling logic. 
 //
 // Loads a single GLB corridor segment (`models/corridor.glb`), clones it along
 // one axis, and wraps segments around the player to fake an infinite tunnel.
 
 import * as THREE from 'three';
 import { scene, camera, renderer, dolly } from '../core/init.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { SimpleModelLoader } from './modelloader.js';
 
 // Runtime state for the tiled corridor.
 let clones = [];
@@ -26,10 +26,10 @@ let halfWidth = 0;
 
 // Spacing between segments as a multiple of their length.
 // 1.0 = touching, >1.0 = gaps, <1.0 = overlap.
-const TILE_FORWARD_MULT = 0.855;
+const TILE_FORWARD_MULT = 1;
 
 // Lateral shift per segment (world units). Set to 0 for no sideways offset.
-const TILE_SIDE_SHIFT = 13;
+const TILE_SIDE_SHIFT = 16;
 
 // Base lateral offset for the whole corridor.
 const TILE_SIDE_BASE = 0;
@@ -54,10 +54,23 @@ export async function createTunnel() {
   clones.forEach((c) => scene.remove(c));
   clones = [];
   corridorLoaded = false;
+  segmentLength = 0;
 
-  const loader = new GLTFLoader();
-  const gltf = await loader.loadAsync('models/corridor.glb');
-  const root = gltf.scene;
+  const loader = new SimpleModelLoader(scene);
+
+  // Load the GLB corridor segment (with its own materials/textures).
+  const root = await loader.load('models/corridor.glb', THREE);
+
+  // We want full control over where/how it appears, so use it as a template.
+  // Remove the original from the scene if the loader added it automatically.
+  if (root.parent === scene) {
+    scene.remove(root);
+  }
+
+  // Normalize transform before measuring and cloning.
+  root.position.set(0, 0, 0);
+  root.rotation.set(0, 0, 0);
+  root.scale.set(1, 1, 1);
   root.updateMatrixWorld(true);
 
   // Infer corridor dimensions and pick forward axis (X or Z).
@@ -77,21 +90,6 @@ export async function createTunnel() {
 
   forwardAxis = corridorAxis;
   sideAxis = corridorAxis === 'x' ? 'z' : 'x';
-
-  // Simple material and neon edges for the corridor meshes.
-  const material = new THREE.MeshLambertMaterial({ color: 0x8080c0, side: THREE.DoubleSide });
-  root.traverse((child) => {
-    if (child.isMesh) {
-      child.material = material;
-
-      const edgesGeom = new THREE.EdgesGeometry(child.geometry);
-      const neonLine = new THREE.LineSegments(
-        edgesGeom,
-        new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2 })
-      );
-      child.add(neonLine);
-    }
-  });
 
   // Center segments around the origin (player starts near the middle tile).
   const offset = Math.floor(NUM_CLONES / 2);
@@ -113,7 +111,7 @@ export async function createTunnel() {
     clones.push(clone);
   }
 
-  // Basic lighting.
+  // Basic lighting (optional, tweak or remove if you already have lights).
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
   scene.add(ambientLight);
 
@@ -122,6 +120,8 @@ export async function createTunnel() {
   scene.add(dirLight);
 
   corridorLoaded = true;
+
+  return clones;
 }
 
 /**
@@ -140,6 +140,7 @@ export function updateCorridor() {
 
   // Total span covered by all tiles (kept for reference / tuning).
   const span = segmentLength * TILE_FORWARD_MULT * NUM_CLONES;
+  // `span` is not used directly but useful to keep for debugging or tuning.
 
   clones.forEach((clone) => {
     const cloneCoord = clone.position[forwardAxis];

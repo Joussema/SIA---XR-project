@@ -2,7 +2,7 @@ import { initScene, renderer, camera, scene, setupVRControllers, onButtonClicked
 
 
 
-import { createTunnel, updateCorridor } from './environment/tunnel.js';
+import { createTunnel } from './environment/tunnel.js';
 import { updateAnomalies } from './anomalies/anomalyManager.js';
 
 
@@ -10,7 +10,7 @@ function animate() {
   // Update player movement (keyboard or VR) first
   updateMovement();
   // Reposition corridor segments around the player
-  updateCorridor();
+  //updateCorridor();
   // Update any active anomalies
   updateAnomalies();
   // Render the scene
