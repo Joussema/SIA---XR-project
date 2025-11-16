@@ -4,7 +4,17 @@ import { renderer, camera, scene, dolly } from '../core/init.js';
 let currentAnomaly = null;
 let lastSpawnTime = 0;
 const ANOMALY_PERIOD = 10000; // every 10 seconds
-const TEST_EVENT = "DEMON"; // change to "FIRE" or "VOID" if needed
+
+// === MANUAL CONFIGURATION - SET THESE VALUES ===
+const MANUAL_EVENT = "DIRE_STONE"; // Change to: "DIRE_STONE", "FIRE_BLOCKADE", "DEMON", "VOID"
+const MANUAL_STONE_POSITION = new THREE.Vector3(0, -1,-3); // Set your desired position here (x, y, z)
+// ==============================================
+
+// Dire stone specific variables
+let direStoneWarning = null;
+let playerDirectionAtWarning = null;
+let warningStartTime = null;
+const WARNING_DURATION = 5000; // 5 seconds to change direction
 
 // === Utility ===
 function getCameraPosition() {
@@ -12,26 +22,24 @@ function getCameraPosition() {
   return camera.position.clone();
 }
 
-// === SPAWN ===
-function spawnAnomaly(type) {
-  const playerPos = getCameraPosition();
-
-  // Forward direction from camera (horizontal only)
-  const forward = new THREE.Vector3(0, 0, -1)
+function getPlayerDirection() {
+  const direction = new THREE.Vector3(0, 0, -1)
     .applyEuler(camera.rotation)
     .setY(0)
     .normalize();
+  return direction;
+}
 
-  const distanceAhead = 10; // how far in front to spawn
-  const spawnPos = playerPos.clone().add(forward.clone().multiplyScalar(distanceAhead));
+function hasPlayerChangedDirection(initialDirection, currentDirection, threshold = 0.3) {
+  return initialDirection.dot(currentDirection) < threshold;
+}
 
-  // Fire line based on spawnPos instead of fixed world coords
-  const startPos = spawnPos.clone().add(forward.clone().multiplyScalar(-2));
-  const endPos = spawnPos.clone().add(forward.clone().multiplyScalar(2));
-
+// === SPAWN ===
+function spawnAnomaly(type, position) {
   const anomaly = {
     type,
-    position: spawnPos.clone(),
+    position: position.clone(), // Use the manually specified position
+    fireGroups: [],
     meshes: [],
     lights: [],
     lifetime: 8000,
@@ -39,8 +47,11 @@ function spawnAnomaly(type) {
   };
 
   switch (type) {
-    case "FIRE":
-      createFire(anomaly, startPos, endPos, 20);
+    case "DIRE_STONE":
+      createDireStone(anomaly);
+      break;
+    case "FIRE_BLOCKADE":
+      createFireBlockade(anomaly, getCameraPosition());
       break;
     case "DEMON":
       createDemon(anomaly);
@@ -53,20 +64,120 @@ function spawnAnomaly(type) {
   currentAnomaly = anomaly;
 }
 
+// === DIRE STONE ===
+function createDireStone(a) {
+  const textureLoader = new THREE.TextureLoader();
+  const stoneTexture = textureLoader.load('images/fire.png');
+  
+  const stoneMaterial = new THREE.SpriteMaterial({
+    map: stoneTexture,
+    transparent: true,
+    opacity: 0.9
+  });
+  
+  const stone = new THREE.Sprite(stoneMaterial);
+  stone.scale.set(1, 1, 1);
+  stone.position.copy(a.position); // Uses the static position you set
+  
+  scene.add(stone);
+  a.meshes.push(stone);
+
+  const light = new THREE.PointLight(0xff3300, 1, 8);
+  light.position.copy(a.position);
+  scene.add(light);
+  a.lights.push(light);
+
+  // Store warning state
+  direStoneWarning = a;
+  playerDirectionAtWarning = getPlayerDirection();
+  warningStartTime = Date.now();
+  
+  console.log("Dire Stone appears at position:", a.position);
+  console.log("Change direction within 5 seconds!");
+}
+
+function updateDireStone(a, progress) {
+  const stone = a.meshes[0];
+  const light = a.lights[0];
+  
+  if (stone) {
+    // Flicker opacity - similar to fire but using the stone's index (0)
+    stone.material.opacity = 0.7 + Math.sin(progress * 20 + 0) * 0.3;
+
+  }
+
+  // Flicker lights - similar to fire
+  if (light) {
+    light.intensity = 1 + Math.sin(progress * 15 + 0) * 0.5;
+  }
+}
+
+// === FIRE BLOCKADE ===
+function createFireBlockade(a, playerPos) {
+  const forward = getPlayerDirection();
+  const frontFireStart = playerPos.clone().add(forward.clone().multiplyScalar(2));
+  const frontFireEnd = playerPos.clone().add(forward.clone().multiplyScalar(6));
+  
+  const backward = forward.clone().multiplyScalar(-1);
+  const backFireStart = playerPos.clone().add(backward.clone().multiplyScalar(2));
+  const backFireEnd = playerPos.clone().add(backward.clone().multiplyScalar(6));
+
+  a.fireGroups.push(createFire(frontFireStart, frontFireEnd, 20));
+  a.fireGroups.push(createFire(backFireStart, backFireEnd, 20));
+
+  const blockadeLight = new THREE.PointLight(0xff0000, 2, 15);
+  blockadeLight.position.copy(playerPos);
+  scene.add(blockadeLight);
+  a.lights.push(blockadeLight);
+
+  console.log("FIRE BLOCKADE! You're trapped!");
+}
+
 // === CLEANUP ===
 function cleanupAnomaly(a) {
   a.meshes.forEach(m => scene.remove(m));
   a.lights.forEach(l => scene.remove(l));
+
+  if (a.fireGroups) {
+    a.fireGroups.forEach(fireGroup => {
+      fireGroup.meshes.forEach(m => scene.remove(m));
+      fireGroup.lights.forEach(l => scene.remove(l));
+    });
+  }
 }
 
 // === Main update loop ===
 export function updateAnomalies() {
   const now = Date.now();
 
-  // Spawn new anomaly periodically
+  // Spawn new anomaly periodically using manual configuration
   if (!currentAnomaly && now - lastSpawnTime > ANOMALY_PERIOD) {
-    spawnAnomaly(TEST_EVENT);
+    spawnAnomaly(MANUAL_EVENT, MANUAL_STONE_POSITION);
     lastSpawnTime = now;
+  }
+
+  // Handle dire stone warning timeout
+  if (direStoneWarning && warningStartTime) {
+    const warningAge = now - warningStartTime;
+    if (warningAge > WARNING_DURATION) {
+      const currentDirection = getPlayerDirection();
+      const hasChanged = hasPlayerChangedDirection(playerDirectionAtWarning, currentDirection);
+      
+      if (!hasChanged) {
+        console.log("Player didn't change direction! Spawning fire blockade!");
+        if (currentAnomaly) {
+          cleanupAnomaly(currentAnomaly);
+          currentAnomaly = null;
+        }
+        spawnAnomaly("FIRE_BLOCKADE", getCameraPosition());
+      } else {
+        console.log("Player changed direction! Dire stone warning cleared.");
+      }
+      
+      direStoneWarning = null;
+      playerDirectionAtWarning = null;
+      warningStartTime = null;
+    }
   }
 
   // Update and remove after lifetime
@@ -77,10 +188,15 @@ export function updateAnomalies() {
     if (age > currentAnomaly.lifetime) {
       cleanupAnomaly(currentAnomaly);
       currentAnomaly = null;
-      // restore base fog instead of removing it completely
       scene.fog = new THREE.Fog(0x222222, 1, 100);
     } else {
       switch (currentAnomaly.type) {
+        case "DIRE_STONE":
+          updateDireStone(currentAnomaly, progress);
+          break;
+        case "FIRE_BLOCKADE":
+          updateFire(currentAnomaly, progress);
+          break;
         case "FIRE":
           updateFire(currentAnomaly, progress);
           break;
@@ -95,15 +211,18 @@ export function updateAnomalies() {
   }
 }
 
+// 
+
 // === FIRE ===
-function createFire(a, startPos, endPos, count = 15) {
-  a.meshes = [];
-  a.lights = [];
+function createFire(startPos, endPos, count = 15) {
+  const fireGroup = {
+    meshes: [],
+    lights: []
+  };
 
   const textureLoader = new THREE.TextureLoader();
   const fireTexture = textureLoader.load('images/flame.png');
 
-  // Calculate direction and spacing automatically
   const direction = new THREE.Vector3().subVectors(endPos, startPos).normalize();
   const totalDistance = startPos.distanceTo(endPos);
   const spacing = totalDistance / (count - 1);
@@ -118,36 +237,36 @@ function createFire(a, startPos, endPos, count = 15) {
 
     const fire = new THREE.Sprite(fireMaterial);
     fire.scale.set(2, 2, 2);
-
-    // Position fire along the line from startPos to endPos
     fire.position.copy(startPos).add(direction.clone().multiplyScalar(i * spacing));
-
     scene.add(fire);
-    a.meshes.push(fire);
+    fireGroup.meshes.push(fire);
 
-    // Optional: add a point light
     const fireLight = new THREE.PointLight(0xff6600, 1.5, 5);
     fireLight.position.copy(fire.position);
     scene.add(fireLight);
-    a.lights.push(fireLight);
+    fireGroup.lights.push(fireLight);
   }
+
+  return fireGroup;
 }
 
 function updateFire(a, progress) {
-  if (!a.meshes) return;
+  if (!a.fireGroups) return;
 
-  a.meshes.forEach((fire, i) => {
-    // Flicker opacity
-    fire.material.opacity = 0.7 + Math.sin(progress * 20 + i) * 0.3;
+  a.fireGroups.forEach(fireGroup => {
+    fireGroup.meshes.forEach((fire, i) => {
+      // Flicker opacity
+      fire.material.opacity = 0.7 + Math.sin(progress * 20 + i) * 0.3;
 
-    // Slight scale flicker
-    const scale = 3 + 0.2 * Math.sin(progress * 10 + i);
-    fire.scale.set(scale, scale, 1);
+      // Slight scale flicker
+      const scale = 3 + 0.2 * Math.sin(progress * 10 + i);
+      fire.scale.set(scale, scale, 1);
 
-    // Flicker lights
-    if (a.lights && a.lights[i]) {
-      a.lights[i].intensity = 1.5 + Math.sin(progress * 20 + i) * 0.5;
-    }
+      // Flicker lights
+      if (fireGroup.lights && fireGroup.lights[i]) {
+        fireGroup.lights[i].intensity = 1.5 + Math.sin(progress * 20 + i) * 0.5;
+      }
+    });
   });
 }
 

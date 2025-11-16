@@ -33,7 +33,6 @@ export function initScene() {
 
 
 const keys = {};
-let mouseX = 0, mouseY = 0;
 let moveSpeed = 0.05;
 
 // Setup keyboard + mouse controls
@@ -41,25 +40,47 @@ export function setupControls() {
   document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
   document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
 
-  document.addEventListener('mousemove', (e) => {
-    mouseX = (e.clientX / window.innerWidth) * 2 - 1;
-    mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
-
-    // Apply mouse look (desktop only)
+  // Demander le pointer lock quand on clique sur le canvas
+  renderer.domElement.addEventListener('click', () => {
     if (!renderer.xr.isPresenting) {
-      camera.rotation.y = -mouseX * Math.PI;
-      camera.rotation.x = mouseY * Math.PI * 0.3;
+      renderer.domElement.requestPointerLock();
     }
   });
+
+  // Gérer le changement de pointer lock
+  document.addEventListener('pointerlockchange', () => {
+    if (document.pointerLockElement === renderer.domElement) {
+      document.addEventListener('mousemove', onMouseMove);
+    } else {
+      document.removeEventListener('mousemove', onMouseMove);
+    }
+  });
+
+  function onMouseMove(e) {
+    if (!renderer.xr.isPresenting) {
+      // Utiliser les mouvements relatifs (movementX/Y) au lieu de la position absolue
+      const sensitivity = 0.002;
+      
+      camera.rotation.y -= e.movementX * sensitivity;
+      camera.rotation.x -= e.movementY * sensitivity;
+
+      // Limiter la rotation verticale pour éviter de se retourner
+      camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
+    }
+  }
 }
 
 // Update movement every frame
 export function updateMovement() {
   const moveTarget = renderer.xr.isPresenting ? dolly : camera;
-  const rotation = renderer.xr.isPresenting ? dolly.rotation : camera.rotation;
-
-  const forward = new THREE.Vector3(0, 0, -1).applyEuler(rotation).setY(0).normalize();
-  const right = new THREE.Vector3(1, 0, 0).applyEuler(rotation).setY(0).normalize();
+  
+  // TOUJOURS utiliser la direction de la CAMÉRA pour le mouvement
+  const cameraWorldDirection = new THREE.Vector3();
+  camera.getWorldDirection(cameraWorldDirection);
+  
+  // Mouvement horizontal seulement (Y = 0)
+  const forward = new THREE.Vector3(cameraWorldDirection.x, 0, cameraWorldDirection.z).normalize();
+  const right = new THREE.Vector3(forward.z, 0, -forward.x).normalize(); // Perpendiculaire à forward
 
   // --- VR movement (controller thumbstick) ---
   if (renderer.xr.isPresenting && controller1) {
@@ -70,8 +91,9 @@ export function updateMovement() {
         if (gamepad && gamepad.axes.length >= 4) {
           const [axisX, axisY] = [gamepad.axes[2] || gamepad.axes[0], gamepad.axes[3] || gamepad.axes[1]];
           if (Math.abs(axisX) > 0.1 || Math.abs(axisY) > 0.1) {
-            dolly.position.addScaledVector(forward, -axisY * moveSpeed);
-            dolly.position.addScaledVector(right, axisX * moveSpeed);
+            // MAINTENANT: Tous les mouvements sont relatifs à la direction de la tête
+            dolly.position.addScaledVector(forward, -axisY * moveSpeed); // Avant/arrière
+            dolly.position.addScaledVector(right, -axisX * moveSpeed);    // Gauche/droite
           }
         }
       }
@@ -82,8 +104,8 @@ export function updateMovement() {
   if (!renderer.xr.isPresenting) {
     if (keys['z'] || keys['arrowup']) moveTarget.position.addScaledVector(forward, moveSpeed);
     if (keys['s'] || keys['arrowdown']) moveTarget.position.addScaledVector(forward, -moveSpeed);
-    if (keys['a'] || keys['arrowleft']) moveTarget.position.addScaledVector(right, -moveSpeed);
-    if (keys['d'] || keys['arrowright']) moveTarget.position.addScaledVector(right, moveSpeed);
+    if (keys['d'] || keys['arrowleft']) moveTarget.position.addScaledVector(right, moveSpeed);
+    if (keys['q'] || keys['arrowright']) moveTarget.position.addScaledVector(right, -moveSpeed);
     if (keys[' ']) moveTarget.position.y += moveSpeed;
     if (keys['shift']) moveTarget.position.y -= moveSpeed;
   }
