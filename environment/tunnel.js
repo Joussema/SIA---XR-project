@@ -29,7 +29,7 @@ let halfWidth = 0;
 const TILE_FORWARD_MULT = 1;
 
 // Lateral shift per segment (world units). Set to 0 for no sideways offset.
-const TILE_SIDE_SHIFT = 16;
+const TILE_SIDE_SHIFT = 20;
 
 // Base lateral offset for the whole corridor.
 const TILE_SIDE_BASE = 0;
