@@ -6,7 +6,8 @@ export let scene, camera, renderer;
 export function initScene() {
   // Scene
   scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x222222, 1, 100);
+  // Horror Fog: Black and close
+  scene.fog = new THREE.Fog(0x000000, 2, 15);
 
   // Camera
   camera = new THREE.PerspectiveCamera(
@@ -27,40 +28,10 @@ export function initScene() {
   // Resize handling (use shared handler)
   window.addEventListener('resize', onWindowResize);
 
-  // Lights (from file 1)
-  const light = new THREE.DirectionalLight(0xffffff, 1);
-  light.position.set(2, 2, 5);
-  scene.add(light);
-
-  const light2 = new THREE.PointLight(0xffffff, 3);
-  light2.position.set(0, 0, 0);
-  scene.add(light2);
-
-  const light3 = new THREE.PointLight(0xffffff, 3);
-  light3.position.set(0, 0, -3);
-  scene.add(light3);
-
-  //--------Axis and Grid Debuggers (from file 1)------
-  const axesHelper = new THREE.AxesHelper(22);
-  scene.add(axesHelper);
-
-  const GridHelpersize = 200;
-  const Gridhelperdivisions = 200;
-  const gridHelper = new THREE.GridHelper(
-    GridHelpersize,
-    Gridhelperdivisions
-  );
-  scene.add(gridHelper);
-
-  const GridHelpersize2 = 200;
-  const Gridhelperdivisions2 = 20;
-  const gridHelper2 = new THREE.GridHelper(
-    GridHelpersize2,
-    Gridhelperdivisions2,
-    0x000000,
-    0x000000
-  );
-  scene.add(gridHelper2);
+  // Lights
+  // Very dim ambient light to prevent absolute pitch blackness
+  const ambientLight = new THREE.AmbientLight(0x111111);
+  scene.add(ambientLight);
 }
 
 //////////////////////////////////////

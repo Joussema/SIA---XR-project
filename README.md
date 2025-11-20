@@ -7,3 +7,7 @@ Your job as the player is to **spot the oddities**. If something feels "off," yo
 Downlaod current models file at :
 
 https://drive.google.com/drive/u/0/folders/1q-eyPBlRYaJlzrsrfpn7U7o0BMuCi0Ua
+
+Downlaod current sound files at :
+
+https://drive.google.com/drive/folders/15AZmtXNT9z6PH-nI1gyZBijSBGaocLdd?usp=sharing

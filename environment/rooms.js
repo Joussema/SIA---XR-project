@@ -62,6 +62,6 @@ export const rooms = [
       forward: [0, 0, -1],  // door faces +Y in Blender -> +Z in game
     },
   ],
-}
+  }
 
 ];

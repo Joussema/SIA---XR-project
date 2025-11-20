@@ -1,5 +1,3 @@
-
-
 import * as THREE from 'three';
 import { scene, camera, renderer, dolly } from '../core/init.js';
 import { SimpleModelLoader } from './modelloader.js';
@@ -88,6 +86,7 @@ export async function createTunnel() {
   let prevPosClone;
   let prevNegClone;
 
+  // 1. Create Center Tile (Index 0)
   {
     const tmpl = templates[Math.floor(Math.random() * templates.length)];
     const instance = tmpl.clone();
@@ -103,15 +102,17 @@ export async function createTunnel() {
     prevNegClone = instance;
   }
 
-  // Build positive tiles (forward) from 1 to offset.
+  // 2. Build positive tiles (forward) from 1 to offset.
+  // Standard connection: New(Start) connects to Prev(End).
   for (let i = 1; i <= offset; i++) {
     const tileIndex = i;
     const tmpl = templates[Math.floor(Math.random() * templates.length)];
     const instance = tmpl.clone();
     instance.root.userData.module = tmpl;
     instance.root.userData.tileIndex = tileIndex;
-    // Snap start of this module onto end of previous positive clone.
+    
     instance.snapTo(prevPosClone, 'start', 'end');
+    
     const sideOffset = TILE_SIDE_BASE + tileIndex * TILE_SIDE_SHIFT;
     instance.root.position[globalSideAxis] += sideOffset;
     scene.add(instance.root);
@@ -119,15 +120,23 @@ export async function createTunnel() {
     prevPosClone = instance;
   }
 
-  // Build negative tiles (backward) from -1 to -offset.
+  // 3. Build negative tiles (backward) from -1 to -offset.
+  // FIX: We want the rooms to look like we are entering 'Start'.
+  // For the first negative room (connecting to center), we connect Start-to-Start. 
+  // This effectively rotates the room 180 degrees.
+  // For subsequent rooms, we connect Start-to-End, preserving that flipped orientation.
   for (let i = 1; i <= offset; i++) {
     const tileIndex = -i;
     const tmpl = templates[Math.floor(Math.random() * templates.length)];
     const instance = tmpl.clone();
     instance.root.userData.module = tmpl;
     instance.root.userData.tileIndex = tileIndex;
-    // Snap end of this module onto start of previous negative clone.
-    instance.snapTo(prevNegClone, 'end', 'start');
+
+    // If i===1, we are connecting to the Center room (0). We use 'start' to flip it.
+    // If i > 1, we are connecting to a room that is already flipped. Its exposed back socket is 'end'.
+    const targetSocketId = (i === 1) ? 'start' : 'end';
+    instance.snapTo(prevNegClone, 'start', targetSocketId);
+
     const sideOffset = TILE_SIDE_BASE + tileIndex * TILE_SIDE_SHIFT;
     instance.root.position[globalSideAxis] += sideOffset;
     scene.add(instance.root);
@@ -155,7 +164,6 @@ export function clampPlayerToCorridor(position) {
 
 /**
  * Reposition a clone to a new tile index. A new random module is chosen
-
  *
  * @param {RoomModule} oldClone      The clone being repositioned.
  * @param {number} newIndex          New tile index for the clone.
@@ -184,14 +192,11 @@ function repositionClone(oldClone, newIndex, direction) {
   newInstance.root.userData.module = tmpl;
   newInstance.root.userData.tileIndex = newIndex;
 
-  // Snap the new instance appropriately based on direction.
-  if (direction === 'behind') {
-    // Connect new module's end to neighbour's start so it extends behind.
-    newInstance.snapTo(neighbour, 'end', 'start');
-  } else {
-    // Connect new module's start to neighbour's end so it extends ahead.
-    newInstance.snapTo(neighbour, 'start', 'end');
-  }
+  // FIX: Because the negative chain is now flipped 180 degrees, the "Outward" facing socket
+  // on the ends of both chains (Positive and Negative) is always 'end'.
+  // We always want to present the 'start' of our new room to the chain.
+  // Therefore, logic for 'behind' and 'ahead' unifies to Start -> End.
+  newInstance.snapTo(neighbour, 'start', 'end');
 
   // Apply sideways offset along global side axis.
   const sideOffset = TILE_SIDE_BASE + newIndex * TILE_SIDE_SHIFT;

@@ -1,6 +1,6 @@
-import { initScene, renderer, camera, scene, setupVRControllers, onButtonClicked, onWindowResize,updateMovement,  setupControls } from './core/init.js';
-
-
+import { initScene, renderer, camera, scene, setupVRControllers, onButtonClicked, onWindowResize, updateMovement, setupControls } from './core/init.js';
+import { setupFlashlight } from './game/flashlight.js';
+import { setupAudio } from './game/audioManager.js';
 
 import { createTunnel } from './environment/tunnel.js';
 import { updateAnomalies } from './anomalies/anomalyManager.js';
@@ -19,6 +19,9 @@ function animate() {
 
 // === MAIN INIT ===
 initScene();
+setupFlashlight(camera);
+setupAudio(camera);
+
 // Initialise the corridor.  Because loading the GLB is asynchronous,
 // wait for it to complete before starting the rest of the app.  If
 // createTunnel rejects, the error will be logged to the console.
@@ -37,17 +40,17 @@ window.addEventListener('resize', onWindowResize);
 const activateButton = document.getElementById("enterXR");
 
 if (activateButton) {
-    if (navigator.xr) {
-        navigator.xr.isSessionSupported("immersive-vr").then((isSupported) => {
-            if (isSupported) {
-                activateButton.disabled = false;
-                activateButton.textContent = "Enter XR";
-                activateButton.addEventListener("click", onButtonClicked);
-            } else {
-                activateButton.textContent = "VR Not Supported";
-            }
-        });
-    } else {
-        activateButton.textContent = "WebXR Not Supported";
-    }
+  if (navigator.xr) {
+    navigator.xr.isSessionSupported("immersive-vr").then((isSupported) => {
+      if (isSupported) {
+        activateButton.disabled = false;
+        activateButton.textContent = "Enter XR";
+        activateButton.addEventListener("click", onButtonClicked);
+      } else {
+        activateButton.textContent = "VR Not Supported";
+      }
+    });
+  } else {
+    activateButton.textContent = "WebXR Not Supported";
+  }
 }
