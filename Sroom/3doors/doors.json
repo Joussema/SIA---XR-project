@@ -1,0 +1,482 @@
+[
+  {
+    "blue": "A door next to this door contains the path forward",
+    "white": "Both doors next to this door contain the path forward",
+    "black": "A door next to this door is true",
+    "solution": "White"
+  },
+  {
+    "blue": "A door next to this door contains the path forward",
+    "white": "[nothing]",
+    "black": "A door next to this door displays a false statement",
+    "solution": "White"
+  },
+  {
+    "blue": "A door with a false statement contains the path forward",
+    "white": "The statement on the blue door is true",
+    "black": "The blue door contains the path forward",
+    "solution": "Black"
+  },
+  {
+    "blue": "All three statements are false",
+    "white": "Two statements are false",
+    "black": "The path forward is behind a door with a false statement",
+    "solution": "White"
+  },
+  {
+    "blue": "Doors next to this door contain the path forward",
+    "white": "Doors next to this door contain the path forward",
+    "black": "Doors next to this door contain the path forward",
+    "solution": "White"
+  },
+  {
+    "blue": "Every door is black",
+    "white": "Every door contains the path forward",
+    "black": "The statement on one of the other two doors would be true if you replaced the word 'every' with the word 'this'",
+    "solution": "White"
+  },
+  {
+    "blue": "The path forward is behind both the black door and the white door",
+    "white": "The path forward is behind both the blue door and the black door",
+    "black": "The path forward is not behind the white door or the blue door",
+    "solution": "Black"
+  },
+  {
+    "blue": "One of the other doors is false",
+    "white": "You will open this door and find it's a dead end",
+    "black": "The blue door is true",
+    "solution": "White"
+  },
+  {
+    "blue": "One of the other statements is false",
+    "white": "One of the other doors contains the path forward",
+    "black": "If you replace the word 'one' in the other two statements with 'both' they will both be false",
+    "solution": "White"
+  },
+  {
+    "blue": "One of the other two doors is false",
+    "white": "You will open this door and find it's a dead end",
+    "black": "The blue door is true",
+    "solution": "White"
+  },
+  {
+    "blue": "Only one door is true",
+    "white": "Only one door contains the path forward",
+    "black": "The path forward is behind the white door",
+    "solution": "White"
+  },
+  {
+    "blue": "Only one door is true",
+    "white": "The black door contains the path forward",
+    "black": "The blue door contains the path forward",
+    "solution": "White"
+  },
+  {
+    "blue": "Only one door next to this door is false and it contains the path forward",
+    "white": "Only one door next to this door is false and it contains the path forward",
+    "black": "Only one door next to this door is false and it contains the path forward",
+    "solution": "White"
+  },
+  {
+    "blue": "Only one statement is false",
+    "white": "Only one statement is true",
+    "black": "The path forward is behind a door with a false statement",
+    "solution": "White"
+  },
+  {
+    "blue": "The black door contains the path forward",
+    "white": "This door and the blue door are both dead ends",
+    "black": "All three doors are dead ends",
+    "solution": "Black"
+  },
+  {
+    "blue": "The black door is black",
+    "white": "The black door is true",
+    "black": "The black door is a dead end",
+    "solution": "Black"
+  },
+  {
+    "blue": "The black door is false",
+    "white": "The black door is true",
+    "black": "A false door contains the path forward",
+    "solution": "Blue"
+  },
+  {
+    "blue": "The black door is not a dead end",
+    "white": "The statement on the black door is true",
+    "black": "A door with a false statement contains the path forward",
+    "solution": "Blue"
+  },
+  {
+    "blue": "The black door is true",
+    "white": "The path forward is behind the true door",
+    "black": "The blue door is true",
+    "solution": "White"
+  },
+  {
+    "blue": "The door next to this door is false",
+    "white": "A door next to this door is true",
+    "black": "The door next to this door contains the path forward",
+    "solution": "White"
+  },
+  {
+    "blue": "The dead end doors are both true",
+    "white": "The dead end doors are both false",
+    "black": "This is not a dead end door",
+    "solution": "White"
+  },
+  {
+    "blue": "The dead end doors are both true",
+    "white": "The path forward is behind the black door",
+    "black": "This is not a dead end door",
+    "solution": "Black"
+  },
+  {
+    "blue": "The dead end doors both have true statements",
+    "white": "The blue door has a true statement",
+    "black": "This door contains the path forward",
+    "solution": "Black"
+  },
+  {
+    "blue": "The path forward is behind a door with a false statement",
+    "white": "The blue door is false",
+    "black": "The white door is false",
+    "solution": "White"
+  },
+  {
+    "blue": "The path forward is behind a door with a statement",
+    "white": "[nothing]",
+    "black": "The white door does not have a statement",
+    "solution": "White"
+  },
+  {
+    "blue": "The path forward is behind a door with a statement containing the letter \"B\"",
+    "white": "The blue door is true",
+    "black": "The path forward is behind a door with a statement containing the letter \"U\"",
+    "solution": "Blue"
+  },
+  {
+    "blue": "The path forward is behind another door",
+    "white": "The truth is on another door",
+    "black": "The words \"another door\" are on another door",
+    "solution": "Blue"
+  },
+  {
+    "blue": "The path forward is behind the black door",
+    "white": "The path forward is behind the white door",
+    "black": "Only one door displays a true statement",
+    "solution": "Blue"
+  },
+  {
+    "blue": "The path forward is behind the black door",
+    "white": "This statement is of no help at all",
+    "black": "This door and the blue door are both false",
+    "solution": "Black"
+  },
+  {
+    "blue": "The path forward is behind the black door",
+    "white": "[nothing]",
+    "black": "The path forward is behind a door with a statement",
+    "solution": "Blue"
+  },
+  {
+    "blue": "The path forward is behind the black door",
+    "white": "The path forward is not behind this door",
+    "black": "The statements on the other two doors are true",
+    "solution": "Blue"
+  },
+  {
+    "blue": "The path forward is behind the black door",
+    "white": "Every statement with the word black is false",
+    "black": "The path forward is behind the blue door",
+    "solution": "Black"
+  },
+  {
+    "blue": "The path forward is behind the door with the word \"blue\" on it",
+    "white": "[nothing]",
+    "black": "The path forward is behind a door that is actually blue",
+    "solution": "Black"
+  },
+  {
+    "blue": "The path forward is behind the false door",
+    "white": "The path forward is behind the false door",
+    "black": "Only one of the other doors is false",
+    "solution": "Black"
+  },
+  {
+    "blue": "The path forward is behind the only door with a true statement",
+    "white": "One of the other doors is true",
+    "black": "The path forward is behind the only door with a false statement",
+    "solution": "Blue"
+  },
+  {
+    "blue": "The path forward is behind the only true door",
+    "white": "Only one statement is true",
+    "black": "The blue door contains the path forward",
+    "solution": "Black"
+  },
+  {
+    "blue": "The path forward is behind the white door",
+    "white": "Statements with the word \"white\" are always true",
+    "black": "The statement on the white door is true",
+    "solution": "White"
+  },
+  {
+    "blue": "The path forward is behind the white door",
+    "white": "A door with a false statement contains the path forward",
+    "black": "The statement on the white door is true",
+    "solution": "Blue"
+  },
+  {
+    "blue": "The path forward is behind the white door",
+    "white": "The other two statements are both true",
+    "black": "The path forward is not behind the blue door",
+    "solution": "Black"
+  },
+  {
+    "blue": "The path forward is behind this door",
+    "white": "The path forward is behind a door next to this door",
+    "black": "The path forward is behind the blue door",
+    "solution": "Black"
+  },
+  {
+    "blue": "The path forward is behind this door",
+    "white": "This statement is of no help of all",
+    "black": "The path forward is behind the blue door",
+    "solution": "Blue"
+  },
+  {
+    "blue": "The path forward is not behind a door with a true statement",
+    "white": "The statement on the blue door is as true as this statement",
+    "black": "The path forward is not behind a door with a true statement",
+    "solution": "White"
+  },
+  {
+    "blue": "The path forward is not behind the black door",
+    "white": "This statement is as true as the statement on the black door",
+    "black": "The path forward is behind the white door",
+    "solution": "White"
+  },
+  {
+    "blue": "The path forward is not behind the door with a unique statement",
+    "white": "This statement is unique",
+    "black": "The path forward is not behind the door with a unique statement",
+    "solution": "White"
+  },
+  {
+    "blue": "The path forward is not behind the white door",
+    "white": "The path forward is not behind this door",
+    "black": "The path forward is behind this door",
+    "solution": "Blue"
+  },
+  {
+    "blue": "The path forward is not behind this door",
+    "white": "The blue door is true",
+    "black": "The path forward is behind this door",
+    "solution": "White"
+  },
+  {
+    "blue": "The path forward is not behind this door",
+    "white": "The path forward is behind this door",
+    "black": "The white door is true",
+    "solution": "Black"
+  },
+  {
+    "blue": "The path forward is on the desk",
+    "white": "The path forward is behind this door",
+    "black": "The path forward is on the floor",
+    "solution": "White"
+  },
+  {
+    "blue": "The path forward is on the table behind you",
+    "white": "The path forward is behind this door",
+    "black": "Every statement claiming where the path forward is, is false. The path forward is behind the blue door",
+    "solution": "White"
+  },
+  {
+    "blue": "The other two doors are true",
+    "white": "The other two doors are blue",
+    "black": "The other two doors are dead ends",
+    "solution": "Black"
+  },
+  {
+    "blue": "The statement on the white door is true",
+    "white": "There is a second wind-up key in this room*",
+    "black": "This door and the white door are both dead ends",
+    "solution": "Blue"
+  },
+  {
+    "blue": "The statement on this door is true",
+    "white": "The statement on this door is true",
+    "black": "Doors that claim to be true contain the path forward",
+    "solution": "Black"
+  },
+  {
+    "blue": "The true doors are both dead ends",
+    "white": "The false doors are both true",
+    "black": "The path forward is behind the blue door",
+    "solution": "Blue"
+  },
+  {
+    "blue": "The white door is a dead end",
+    "white": "The blue door is false",
+    "black": "The dead end doors both have false statements",
+    "solution": "Black"
+  },
+  {
+    "blue": "The white door is true",
+    "white": "The other two doors are false",
+    "black": "The other two doors are dead ends",
+    "solution": "Black"
+  },
+  {
+    "blue": "There are four doors in this room",
+    "white": "There is only one door in this room",
+    "black": "The path forward is behind the true door",
+    "solution": "Black"
+  },
+  {
+    "blue": "There are three doors in this room",
+    "white": "Two doors in this room are dead ends",
+    "black": "This door is one of the two dead end doors",
+    "solution": "Black"
+  },
+  {
+    "blue": "There are two false statements",
+    "white": "This is the only true statement",
+    "black": "The white door is a dead end",
+    "solution": "White"
+  },
+  {
+    "blue": "There are two true doors",
+    "white": "There are two dead end doors",
+    "black": "This door is a dead end",
+    "solution": "Black"
+  },
+  {
+    "blue": "There is only one true door",
+    "white": "Both statements written on the other doors are false",
+    "black": "The door with the most words does not have the path forward",
+    "solution": "Black"
+  },
+  {
+    "blue": "There is only one true statement",
+    "white": "The path forward is behind a door with a false statement",
+    "black": "There are two true statements",
+    "solution": "Blue"
+  },
+  {
+    "blue": "This door and the white door are both dead ends",
+    "white": "This door and the blue door are both dead ends",
+    "black": "The other two statements have identical wording",
+    "solution": "Black"
+  },
+  {
+    "blue": "This door is a dead end",
+    "white": "This door is a dead end",
+    "black": "This puzzle is harder than it seems",
+    "solution": "Black"
+  },
+  {
+    "blue": "This door is a dead end",
+    "white": "A door with a false statement is a dead end",
+    "black": "There are two false statements",
+    "solution": "White"
+  },
+  {
+    "blue": "This door is not a dead end.",
+    "white": "This door contains the path forward.",
+    "black": "All statements that contain the word 'path forward' are false.",
+    "solution": "White"
+  },
+  {
+    "blue": "This door is not blue",
+    "white": "Every statement with the word blue is false",
+    "black": "The black door and the blue door are dead ends",
+    "solution": "White"
+  },
+  {
+    "blue": "This door is the black door",
+    "white": "This door is the blue door",
+    "black": "The door that claims to be black has the path forward",
+    "solution": "Blue"
+  },
+  {
+    "blue": "This door is the middle door",
+    "white": "The path forward is behind the middle door",
+    "black": "This door is the middle door",
+    "solution": "White"
+  },
+  {
+    "blue": "This door is the white door",
+    "white": "This door is the black door",
+    "black": "The blue door contains the path forward",
+    "solution": "Blue"
+  },
+  {
+    "blue": "This door's statement is both true and false",
+    "white": "The blue door contains the path forward if its statement is false",
+    "black": "This statement is as true as the white door's statement",
+    "solution": "Blue"
+  },
+  {
+    "blue": "This is the black door",
+    "white": "This is the black door",
+    "black": "The black door is not a dead end",
+    "solution": "Black"
+  },
+  {
+    "blue": "This is the blue door",
+    "white": "The blue door is true",
+    "black": "The blue door is a dead end",
+    "solution": "Blue"
+  },
+  {
+    "blue": "This is the only true door",
+    "white": "The path forward is behind the other door with a true statement",
+    "black": "One of the other doors is true",
+    "solution": "Black"
+  },
+  {
+    "blue": "This statement appears on another door",
+    "white": "The blue door is a dead end",
+    "black": "This statement appears on another door",
+    "solution": "Blue"
+  },
+  {
+    "blue": "Two of these statements are true",
+    "white": "The statement on the blue door is true",
+    "black": "The path forward is behind a door with a true statement",
+    "solution": "Black"
+  },
+  {
+    "blue": "You are in the parlor",
+    "white": "This door is a dead end",
+    "black": "The blue door is true",
+    "solution": "White"
+  },
+  {
+    "blue": "You will open this door and find it's a dead end",
+    "white": "A true door contains the path forward",
+    "black": "This door and the white door are both false",
+    "solution": "White"
+  },
+  {
+    "blue": "Only one statement is true.",
+    "white": "A door next to this door is true.",
+    "black": "A door next to this door contains the path forward.",
+    "solution": "White"
+  },
+  {
+    "blue": "A door that displays the word 'true' is false.",
+    "white": "A door that displays the word 'path forward' is a dead end.",
+    "black": "The white door is true and does not contain the path forward.",
+    "solution": "White"
+  },
+  {
+    "blue": "There is only one true statement",
+    "white": "The path forward is behind a door with a false statement",
+    "black": "There are two true statements",
+    "solution": "Blue"
+  }
+]
