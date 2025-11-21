@@ -2,13 +2,17 @@ import * as THREE from 'three';
 import { renderer, camera, scene, dolly } from '../core/init.js';
 
 let currentAnomaly = null;
+// Periodic spawning has been disabled. The dynamic game logic now
+// explicitly triggers anomalies when appropriate, so the manager
+// maintains currentAnomaly only. These variables remain for API
+// compatibility but are no longer used.
 let lastSpawnTime = 0;
-const ANOMALY_PERIOD = 10000; // every 10 seconds
+const ANOMALY_PERIOD = 10000;
 
-// === MANUAL CONFIGURATION - SET THESE VALUES ===
-const MANUAL_EVENT = ""; // Change to: "DIRE_STONE", "FIRE_BLOCKADE", "DEMON", "VOID"
-const MANUAL_STONE_POSITION = new THREE.Vector3(0, -1,-3); // Set your desired position here (x, y, z)
-// ==============================================
+// Manual configuration values are no longer used. Anomalies are
+// spawned explicitly via exported helper functions.
+const MANUAL_EVENT = "";
+const MANUAL_STONE_POSITION = new THREE.Vector3(0, -1, -3);
 
 // Dire stone specific variables
 let direStoneWarning = null;
@@ -150,11 +154,9 @@ function cleanupAnomaly(a) {
 export function updateAnomalies() {
   const now = Date.now();
 
-  // Spawn new anomaly periodically using manual configuration
-  if (!currentAnomaly && now - lastSpawnTime > ANOMALY_PERIOD) {
-    spawnAnomaly(MANUAL_EVENT, MANUAL_STONE_POSITION);
-    lastSpawnTime = now;
-  }
+  // Periodic spawning has been disabled. Anomalies are now spawned
+  // explicitly by game logic rather than on a timer. The original
+  // manual configuration block has been removed.
 
   // Handle dire stone warning timeout
   if (direStoneWarning && warningStartTime) {
@@ -208,6 +210,38 @@ export function updateAnomalies() {
           break;
       }
     }
+  }
+}
+
+// === External API ===
+/**
+ * Spawn an anomaly manually at a given position. Any existing anomaly
+ * will be cleared before spawning the new one. This function is
+ * intended for use by the dynamic game logic to place anomalies
+ * according to the current step blueprint.
+ *
+ * @param {string} type The anomaly type ('DIRE_STONE', 'FIRE_BLOCKADE', 'DEMON', 'VOID').
+ * @param {THREE.Vector3} position The world position at which to spawn the anomaly.
+ */
+export function spawnAnomalyManual(type, position) {
+  // Clear existing anomaly if present.
+  if (currentAnomaly) {
+    cleanupAnomaly(currentAnomaly);
+    currentAnomaly = null;
+  }
+  if (!type) return;
+  spawnAnomaly(type, position);
+}
+
+/**
+ * Remove the currently active anomaly, if any. This is useful when
+ * transitioning between steps so that previous anomalies do not linger
+ * unexpectedly.
+ */
+export function clearAnomaly() {
+  if (currentAnomaly) {
+    cleanupAnomaly(currentAnomaly);
+    currentAnomaly = null;
   }
 }
 
