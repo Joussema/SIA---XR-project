@@ -1,9 +1,12 @@
 import * as THREE from 'three';
 
+let globalListener = null;
+
 export function setupAudio(camera) {
     // Create an AudioListener and add it to the camera
     const listener = new THREE.AudioListener();
     camera.add(listener);
+    globalListener = listener;
 
     // Create a global audio source
     const sound = new THREE.Audio(listener);
@@ -52,4 +55,22 @@ export function playSound(soundName) {
     const audio = new Audio(`sounds/${soundName}`);
     audio.volume = 1.0;
     audio.play().catch(e => console.error("Failed to play sound:", e));
+}
+
+export function playPositionalSound(soundName, parentObject, refDistance = 2, maxDistance = 15) {
+    if (!globalListener) return;
+    const sound = new THREE.PositionalAudio(globalListener);
+    const audioLoader = new THREE.AudioLoader();
+    audioLoader.load(`sounds/${soundName}`, function (buffer) {
+        sound.setBuffer(buffer);
+        sound.setRefDistance(refDistance);
+        sound.setMaxDistance(maxDistance);
+        sound.setVolume(1.0);
+        parentObject.add(sound);
+        sound.play();
+        // Optional: remove sound object after playback if not looping
+        sound.onEnded = () => {
+            parentObject.remove(sound);
+        };
+    });
 }

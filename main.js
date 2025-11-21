@@ -1,7 +1,7 @@
 import { initScene, renderer, camera, scene, setupVRControllers, onButtonClicked, onWindowResize, updateMovement, setupControls, dolly } from './core/init.js';
 import * as THREE from 'three';
 import { setupFlashlight } from './game/flashlight.js';
-import { setupAudio, playSound } from './game/audioManager.js';
+import { setupAudio, playSound, playPositionalSound } from './game/audioManager.js';
 
 // Exit8 step-based imports
 import { GameManager } from './game/gameManager.js';
@@ -87,7 +87,7 @@ function animate() {
   const bp = gameManager.getBlueprint(state.currentStep);
 
   // We only care if the forward room is one of our scary rooms
-  if (bp.forwardRoomType === 'scaryladyroom' || bp.forwardRoomType === 'scarygang') {
+  if (bp.forwardRoomType === 'scaryladyroom' || bp.forwardRoomType === 'scarygang' || bp.forwardRoomType === 'fiendroom') {
     // Get the forward room instance
     const forwardRoom = getRoomInstance('forward');
     if (forwardRoom && forwardRoom.root) {
@@ -104,8 +104,19 @@ function animate() {
         if (!gameManager.soundPlayedForStep) {
           if (bp.forwardRoomType === 'scaryladyroom') {
             playSound('Lady statue.mp3');
-          } else {
+          } else if (bp.forwardRoomType === 'scarygang') {
             playSound('Gang sound.mp3');
+          } else if (bp.forwardRoomType === 'fiendroom') {
+            // Create a dummy object for the sound source
+            // Position it slightly into the room (e.g., +Z is forward into the room from entrance?)
+            // Actually, forward room is snapped to center end.
+            // Let's assume a position relative to the room root.
+            const soundSource = new THREE.Object3D();
+            // Place it somewhere in the room. 
+            // Room root is at entrance.
+            soundSource.position.set(3, 4, -4);
+            forwardRoom.root.add(soundSource);
+            playPositionalSound('fiend breath.mp3', soundSource, 5, 20);
           }
           gameManager.soundPlayedForStep = true;
         }

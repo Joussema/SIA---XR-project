@@ -41,7 +41,7 @@ export async function initDynamicWorld() {
   if (templatesLoaded) return;
   const loader = new SimpleModelLoader(scene);
   // Only load templates we need for dynamic branching.
-  const needed = ['bufferzone', 'corridor', 'sroom', 'scaryladyroom', 'scarygang'];
+  const needed = ['bufferzone', 'corridor', 'sroom', 'scaryladyroom', 'scarygang', 'fiendroom'];
   for (const def of rooms) {
     if (!needed.includes(def.id)) continue;
     const glbRoot = await loader.load(def.modelPath, THREE);
