@@ -64,7 +64,7 @@ export class GameManager {
       // 25% chance for Scary Lady Room
       // 25% chance for Scary Gang Room
       // 25% chance for Fiend Room
-      const rand = Math.random()+1;
+      const rand = Math.random();
       if (rand < 0.25) {
         const anomalyTypes = ['DEMON'];
         anomalyType = anomalyTypes[Math.floor(Math.random() * anomalyTypes.length)];
