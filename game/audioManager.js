@@ -47,3 +47,9 @@ export function setupAudio(camera) {
 
     return sound;
 }
+
+export function playSound(soundName) {
+    const audio = new Audio(`sounds/${soundName}`);
+    audio.volume = 1.0;
+    audio.play().catch(e => console.error("Failed to play sound:", e));
+}

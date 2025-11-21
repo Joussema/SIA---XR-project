@@ -51,7 +51,7 @@ export class GameManager {
     const roomTypes = ['corridor', 'sroom'];
 
     // Randomly choose room type for forward and backward branches.
-    const forwardRoomType = roomTypes[Math.floor(Math.random() * roomTypes.length)];
+    let forwardRoomType = roomTypes[Math.floor(Math.random() * roomTypes.length)];
     const backwardRoomType = roomTypes[Math.floor(Math.random() * roomTypes.length)];
 
     // Randomly decide if an anomaly should appear (e.g., 50% chance).
@@ -60,10 +60,25 @@ export class GameManager {
     let anomalyLocation = null;
 
     if (hasAnomaly) {
-      const anomalyTypes = ['DEMON'];
-      anomalyType = anomalyTypes[Math.floor(Math.random() * anomalyTypes.length)];
-      // Anomaly always appears in the forward room so you see it when looking forward.
-      anomalyLocation = 'forward';
+      // 33% chance for standard Demon anomaly
+      // 33% chance for Scary Lady Room
+      // 33% chance for Scary Gang Room
+      const rand = Math.random();
+      if (rand < 0.33) {
+        const anomalyTypes = ['DEMON'];
+        anomalyType = anomalyTypes[Math.floor(Math.random() * anomalyTypes.length)];
+        anomalyLocation = 'forward';
+      } else if (rand < 0.66) {
+        // The room itself is the anomaly
+        forwardRoomType = 'scaryladyroom';
+        anomalyType = 'ROOM';
+        anomalyLocation = 'forward';
+      } else {
+        // The room itself is the anomaly
+        forwardRoomType = 'scarygang';
+        anomalyType = 'ROOM';
+        anomalyLocation = 'forward';
+      }
     }
 
     // If there is an anomaly, the correct decision is to turn back.

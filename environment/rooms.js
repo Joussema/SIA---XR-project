@@ -44,24 +44,63 @@ export const rooms = [
     ]
   },
   {
-  id: 'sroom',
-  modelPath: 'models/sroom.glb',
-  defaultUp: [0, 1, 0],
-  preRotation: 0,
-  entrances: [
-    {
-      id: 'start',
-      // Blender back: (0, -6, 0) -> [0, 2, -6]
-      position: [0, 2, 8],
-      forward: [0, 0, 1], // door faces -Y in Blender -> -Z in game
-    },
-    {
-      id: 'end',
-      // Blender entrance: (0, 30, 0) -> [0, 2, 30]
-      position: [0, 2, -32],
-      forward: [0, 0, -1],  // door faces +Y in Blender -> +Z in game
-    },
-  ],
-  }
-
+    id: 'sroom',
+    modelPath: 'models/sroom.glb',
+    defaultUp: [0, 1, 0],
+    preRotation: 0,
+    entrances: [
+      {
+        id: 'start',
+        // Blender back: (0, -6, 0) -> [0, 2, -6]
+        position: [0, 2, 8],
+        forward: [0, 0, 1], // door faces -Y in Blender -> -Z in game
+      },
+      {
+        id: 'end',
+        // Blender entrance: (0, 30, 0) -> [0, 2, 30]
+        position: [0, 2, -32],
+        forward: [0, 0, -1],  // door faces +Y in Blender -> +Z in game
+      },
+    ],
+  },
+  {
+    id: 'scaryladyroom',
+    modelPath: 'models/scaryladyroom.glb',
+    defaultUp: [0, 1, 0],
+    preRotation: 0,
+    entrances: [
+      {
+        id: 'start',
+        // Blender (-10, 16, 0)
+        position: [10, 2, 16],
+        forward: [0, 0, 1],   // faces +Y in Blender -> +Z in game
+      },
+      {
+        id: 'end',
+        // Blender (10, -16, 0)
+        position: [-10, 2, -16],
+        forward: [0, 0, -1],  // faces -Y in Blender -> -Z in game
+      },
+    ],
+  },
+  {
+    id: 'scarygang',
+    modelPath: 'models/scarygang.glb',
+    defaultUp: [0, 1, 0],
+    preRotation: 0,
+    entrances: [
+      {
+        id: 'start',
+        // Blender (-10, 16, 0)
+        position: [10, 2, 16],
+        forward: [0, 0, 1],   // faces +Y in Blender -> +Z in game
+      },
+      {
+        id: 'end',
+        // Blender (10, -16, 0)
+        position: [-10, 2, -16],
+        forward: [0, 0, -1],  // faces -Y in Blender -> -Z in game
+      },
+    ],
+  },
 ];

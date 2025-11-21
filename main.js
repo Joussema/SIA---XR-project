@@ -1,7 +1,7 @@
 import { initScene, renderer, camera, scene, setupVRControllers, onButtonClicked, onWindowResize, updateMovement, setupControls, dolly } from './core/init.js';
 import * as THREE from 'three';
 import { setupFlashlight } from './game/flashlight.js';
-import { setupAudio } from './game/audioManager.js';
+import { setupAudio, playSound } from './game/audioManager.js';
 
 // Exit8 step-based imports
 import { GameManager } from './game/gameManager.js';
@@ -81,6 +81,44 @@ function animate() {
     // Update overlay to reflect new step.
     updateOverlay();
   }
+
+  // --- NEW SOUND LOGIC START ---
+  const state = gameManager.getState();
+  const bp = gameManager.getBlueprint(state.currentStep);
+
+  // We only care if the forward room is one of our scary rooms
+  if (bp.forwardRoomType === 'scaryladyroom' || bp.forwardRoomType === 'scarygang') {
+    // Get the forward room instance
+    const forwardRoom = getRoomInstance('forward');
+    if (forwardRoom && forwardRoom.root) {
+      // The root of the room is placed at the entrance connection point.
+      // We check if the player is close to this point (entering the room).
+      const roomPos = new THREE.Vector3();
+      forwardRoom.root.getWorldPosition(roomPos);
+
+      const dist = playerPos.distanceTo(roomPos);
+
+      // Threshold: 10 units seems reasonable for "entering" the room
+      if (dist < 10.0) {
+        // Check if we already played the sound for this step
+        if (!gameManager.soundPlayedForStep) {
+          if (bp.forwardRoomType === 'scaryladyroom') {
+            playSound('Lady statue.mp3');
+          } else {
+            playSound('Gang sound.mp3');
+          }
+          gameManager.soundPlayedForStep = true;
+        }
+      }
+    }
+  }
+
+  // Reset sound flag if we moved to a new step (simple check)
+  if (gameManager.lastStepChecked !== state.currentStep) {
+    gameManager.soundPlayedForStep = false;
+    gameManager.lastStepChecked = state.currentStep;
+  }
+  // --- NEW SOUND LOGIC END ---
 
   // Update any active anomalies (animation and cleanup of lifetime).
   updateAnomalies();
