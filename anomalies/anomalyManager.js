@@ -404,12 +404,27 @@ function createWeepingAngel(a) {
       const model = gltf.scene;
       model.scale.set(1, 1, 1);
 
+      // Determine player direction to handle backward movement
+      const playerDir = getPlayerDirection();
+      const isMovingBackward = playerDir.z > 0;
+
+      // Calculate final offset and rotation
+      const finalOffset = SPAWN_OFFSET.clone();
+      let finalRotation = INITIAL_ROTATION_Y;
+
+      if (isMovingBackward) {
+        // Mirror position and flip rotation for backward movement
+        finalOffset.x *= -1;
+        finalOffset.z *= -1;
+        finalRotation += Math.PI;
+      }
+
       // Position: Apply offset to the room center (a.position)
-      model.position.copy(a.position).add(SPAWN_OFFSET);
+      model.position.copy(a.position).add(finalOffset);
       model.position.y = 0.2; // Initial Y position
 
       // Rotation: Apply initial rotation
-      model.rotation.y = INITIAL_ROTATION_Y;
+      model.rotation.y = finalRotation;
 
       scene.add(model);
       a.meshes.push(model);
