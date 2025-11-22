@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { renderer, camera, scene, dolly } from '../core/init.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 let currentAnomaly = null;
 // Periodic spawning has been disabled. The dynamic game logic now
@@ -11,7 +12,7 @@ const ANOMALY_PERIOD = 10000;
 
 // Manual configuration values are no longer used. Anomalies are
 // spawned explicitly via exported helper functions.
-const MANUAL_EVENT = "";
+const MANUAL_EVENT = '';
 const MANUAL_STONE_POSITION = new THREE.Vector3(0, -1, -3);
 
 // Dire stone specific variables
@@ -42,26 +43,30 @@ function hasPlayerChangedDirection(initialDirection, currentDirection, threshold
 function spawnAnomaly(type, position) {
   const anomaly = {
     type,
-    position: position.clone(), // Use the manually specified position
+    position: position.clone(),
     fireGroups: [],
     meshes: [],
     lights: [],
-    lifetime: 8000,
-    createdAt: Date.now()
+    lifetime: type === 'WEEPING_ANGEL' ? 999999999 : 8000,
+    createdAt: Date.now(),
+    state: undefined
   };
 
   switch (type) {
-    case "DIRE_STONE":
+    case 'DIRE_STONE':
       createDireStone(anomaly);
       break;
-    case "FIRE_BLOCKADE":
+    case 'FIRE_BLOCKADE':
       createFireBlockade(anomaly, getCameraPosition());
       break;
-    case "DEMON":
+    case 'DEMON':
       createDemon(anomaly);
       break;
-    case "VOID":
+    case 'VOID':
       createVoid(anomaly);
+      break;
+    case 'WEEPING_ANGEL':
+      createWeepingAngel(anomaly);
       break;
   }
 
@@ -72,17 +77,17 @@ function spawnAnomaly(type, position) {
 function createDireStone(a) {
   const textureLoader = new THREE.TextureLoader();
   const stoneTexture = textureLoader.load('images/fire.png');
-  
+
   const stoneMaterial = new THREE.SpriteMaterial({
     map: stoneTexture,
     transparent: true,
     opacity: 0.9
   });
-  
+
   const stone = new THREE.Sprite(stoneMaterial);
   stone.scale.set(1, 1, 1);
-  stone.position.copy(a.position); // Uses the static position you set
-  
+  stone.position.copy(a.position);
+
   scene.add(stone);
   a.meshes.push(stone);
 
@@ -95,24 +100,23 @@ function createDireStone(a) {
   direStoneWarning = a;
   playerDirectionAtWarning = getPlayerDirection();
   warningStartTime = Date.now();
-  
-  console.log("Dire Stone appears at position:", a.position);
-  console.log("Change direction within 5 seconds!");
+
+  console.log('Dire Stone appears at position:', a.position);
+  console.log('Change direction within 5 seconds!');
 }
 
 function updateDireStone(a, progress) {
   const stone = a.meshes[0];
   const light = a.lights[0];
-  
-  if (stone) {
-    // Flicker opacity - similar to fire but using the stone's index (0)
-    stone.material.opacity = 0.7 + Math.sin(progress * 20 + 0) * 0.3;
 
+  if (stone) {
+    // Flicker opacity
+    stone.material.opacity = 0.7 + Math.sin(progress * 20) * 0.3;
   }
 
-  // Flicker lights - similar to fire
+  // Flicker lights
   if (light) {
-    light.intensity = 1 + Math.sin(progress * 15 + 0) * 0.5;
+    light.intensity = 1 + Math.sin(progress * 15) * 0.5;
   }
 }
 
@@ -121,7 +125,7 @@ function createFireBlockade(a, playerPos) {
   const forward = getPlayerDirection();
   const frontFireStart = playerPos.clone().add(forward.clone().multiplyScalar(2));
   const frontFireEnd = playerPos.clone().add(forward.clone().multiplyScalar(6));
-  
+
   const backward = forward.clone().multiplyScalar(-1);
   const backFireStart = playerPos.clone().add(backward.clone().multiplyScalar(2));
   const backFireEnd = playerPos.clone().add(backward.clone().multiplyScalar(6));
@@ -154,28 +158,27 @@ function cleanupAnomaly(a) {
 export function updateAnomalies() {
   const now = Date.now();
 
-  // Periodic spawning has been disabled. Anomalies are now spawned
-  // explicitly by game logic rather than on a timer. The original
-  // manual configuration block has been removed.
-
   // Handle dire stone warning timeout
   if (direStoneWarning && warningStartTime) {
     const warningAge = now - warningStartTime;
     if (warningAge > WARNING_DURATION) {
       const currentDirection = getPlayerDirection();
-      const hasChanged = hasPlayerChangedDirection(playerDirectionAtWarning, currentDirection);
-      
+      const hasChanged = hasPlayerChangedDirection(
+        playerDirectionAtWarning,
+        currentDirection
+      );
+
       if (!hasChanged) {
         console.log("Player didn't change direction! Spawning fire blockade!");
         if (currentAnomaly) {
           cleanupAnomaly(currentAnomaly);
           currentAnomaly = null;
         }
-        spawnAnomaly("FIRE_BLOCKADE", getCameraPosition());
+        spawnAnomaly('FIRE_BLOCKADE', getCameraPosition());
       } else {
-        console.log("Player changed direction! Dire stone warning cleared.");
+        console.log('Player changed direction! Dire stone warning cleared.');
       }
-      
+
       direStoneWarning = null;
       playerDirectionAtWarning = null;
       warningStartTime = null;
@@ -193,20 +196,21 @@ export function updateAnomalies() {
       scene.fog = new THREE.Fog(0x222222, 1, 100);
     } else {
       switch (currentAnomaly.type) {
-        case "DIRE_STONE":
+        case 'DIRE_STONE':
           updateDireStone(currentAnomaly, progress);
           break;
-        case "FIRE_BLOCKADE":
+        case 'FIRE_BLOCKADE':
+        case 'FIRE':
           updateFire(currentAnomaly, progress);
           break;
-        case "FIRE":
-          updateFire(currentAnomaly, progress);
-          break;
-        case "DEMON":
+        case 'DEMON':
           updateDemon(currentAnomaly, progress);
           break;
-        case "VOID":
+        case 'VOID':
           updateVoid(currentAnomaly, progress);
+          break;
+        case 'WEEPING_ANGEL':
+          updateWeepingAngel(currentAnomaly, progress);
           break;
       }
     }
@@ -216,15 +220,12 @@ export function updateAnomalies() {
 // === External API ===
 /**
  * Spawn an anomaly manually at a given position. Any existing anomaly
- * will be cleared before spawning the new one. This function is
- * intended for use by the dynamic game logic to place anomalies
- * according to the current step blueprint.
+ * will be cleared before spawning the new one.
  *
- * @param {string} type The anomaly type ('DIRE_STONE', 'FIRE_BLOCKADE', 'DEMON', 'VOID').
+ * @param {string} type The anomaly type ('DIRE_STONE', 'FIRE_BLOCKADE', 'DEMON', 'VOID', 'WEEPING_ANGEL').
  * @param {THREE.Vector3} position The world position at which to spawn the anomaly.
  */
 export function spawnAnomalyManual(type, position) {
-  // Clear existing anomaly if present.
   if (currentAnomaly) {
     cleanupAnomaly(currentAnomaly);
     currentAnomaly = null;
@@ -234,9 +235,7 @@ export function spawnAnomalyManual(type, position) {
 }
 
 /**
- * Remove the currently active anomaly, if any. This is useful when
- * transitioning between steps so that previous anomalies do not linger
- * unexpectedly.
+ * Remove the currently active anomaly, if any.
  */
 export function clearAnomaly() {
   if (currentAnomaly) {
@@ -244,8 +243,6 @@ export function clearAnomaly() {
     currentAnomaly = null;
   }
 }
-
-// 
 
 // === FIRE ===
 function createFire(startPos, endPos, count = 15) {
@@ -266,7 +263,7 @@ function createFire(startPos, endPos, count = 15) {
       map: fireTexture,
       color: 0xffaa00,
       transparent: true,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.AdditiveBlending
     });
 
     const fire = new THREE.Sprite(fireMaterial);
@@ -388,5 +385,142 @@ function createVoid(a) {
 }
 
 function updateVoid(a, progress) {
-  a.meshes[0].scale.setScalar(1 + Math.sin(progress * 10) * 0.2);
+  if (a.meshes[0]) {
+    a.meshes[0].scale.setScalar(1 + Math.sin(progress * 10) * 0.2);
+  }
 }
+
+// === WEEPING ANGEL ===
+function createWeepingAngel(a) {
+  // Configuration
+  const SPAWN_OFFSET = new THREE.Vector3(2.96, 2, 4); // Spawn at the end of the room (relative to center)
+  const INITIAL_ROTATION_Y = -Math.PI / 2; // 90 degrees
+
+  // Load the Weeping Angel model
+  const loader = new GLTFLoader();
+  loader.load(
+    'models/weeping angel statue.glb',
+    gltf => {
+      const model = gltf.scene;
+      model.scale.set(1, 1, 1);
+
+      // Position: Apply offset to the room center (a.position)
+      model.position.copy(a.position).add(SPAWN_OFFSET);
+      model.position.y = 0.2; // Initial Y position
+
+      // Rotation: Apply initial rotation
+      model.rotation.y = INITIAL_ROTATION_Y;
+
+      scene.add(model);
+      a.meshes.push(model);
+
+      // Store state
+      a.state = {
+        active: false, // Becomes active when player reaches half room
+        speed: 1.5, // "slowly not very fast"
+        lastPos: model.position.clone(),
+        roomCenter: a.position.clone(), // Store room center for activation check
+        activationDistance: 2.0, // Configurable offset: smaller = deeper into room
+        timeNotLooking: 0, // Timer for delay
+        hasDropped: false, // Track if it has dropped to floor
+        dropY: -1, // Target Y position when moving
+        isPlayingSound: false,
+        currentSound: null
+      };
+    },
+    undefined,
+    error => {
+      console.error('An error happened loading Weeping Angel:', error);
+    }
+  );
+}
+
+function updateWeepingAngel(a, progress) {
+  if (!a.meshes.length || !a.state) return;
+
+  const angel = a.meshes[0];
+  const playerPos = getCameraPosition();
+  const playerDir = getPlayerDirection();
+
+  // 1. Check if player reached half the room (activation trigger)
+  const distToCenter = playerPos.distanceTo(a.state.roomCenter);
+
+  if (!a.state.active) {
+    // Activate if player is within some distance of the center
+    // User requested "deeper into the room", so we use the configurable activationDistance
+    if (distToCenter < a.state.activationDistance) {
+      a.state.active = true;
+      console.log('Weeping Angel ACTIVATED');
+    }
+  }
+
+  if (a.state.active) {
+    // 2. Check visibility
+    const toAngel = new THREE.Vector3().subVectors(angel.position, playerPos).normalize();
+    const dot = playerDir.dot(toAngel);
+    const isLooking = dot > 0.4;
+
+    if (!isLooking) {
+
+      // Better: use performance.now() diff if possible, but for now let's use a small increment.
+      a.state.timeNotLooking += 1 / 60;
+
+      if (a.state.timeNotLooking > 1.0) {
+        // 3. Movement Logic
+
+        // Drop to floor if not already dropped
+        if (!a.state.hasDropped) {
+          angel.position.y = a.state.dropY;
+          a.state.hasDropped = true;
+        }
+
+        // Move towards player
+        const moveDir = new THREE.Vector3().subVectors(playerPos, angel.position).normalize();
+        moveDir.y = 0;
+
+        const moveStep = moveDir.multiplyScalar(a.state.speed * 0.02);
+        angel.position.add(moveStep);
+
+        // Make angel face the player
+        angel.lookAt(playerPos.x, angel.position.y, playerPos.z);
+
+        // Play sound if not playing
+        if (!a.state.isPlayingSound) {
+          // "simple string + rand[1,2] type of situation"
+          const randNum = Math.floor(Math.random() * 2) + 1;
+          const soundPath = `sounds/sliding_sound${randNum}.mp3`;
+
+          const sound = new Audio(soundPath);
+          sound.volume = 0.6;
+          sound.play().catch(e => console.warn("Audio play failed", e));
+
+          a.state.isPlayingSound = true;
+          a.state.currentSound = sound;
+
+          // Reset flag when sound ends
+          sound.onended = () => {
+            a.state.isPlayingSound = false;
+            a.state.currentSound = null;
+          };
+        }
+
+        // Stop if too close
+        if (playerPos.distanceTo(angel.position) < 1.0) {
+          angel.position.sub(moveStep);
+        }
+      }
+    } else {
+      // Reset timer if looking
+      a.state.timeNotLooking = 0;
+      // Optional: Stop sound if looking? "Statue freezes".
+      // The user didn't explicitly say stop sound, but it makes sense for a weeping angel.
+      // Let's pause sounds.
+      if (a.state.currentSound && !a.state.currentSound.paused) {
+        a.state.currentSound.pause();
+        a.state.isPlayingSound = false;
+      }
+    }
+  }
+}
+
+
