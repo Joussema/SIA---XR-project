@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { VRButton } from 'three/addons/webxr/VRButton.js';
+import { handDetector } from './hand-gestures.js';
+
 //f
 export let scene, camera, renderer;
 
@@ -38,6 +40,41 @@ export function initScene() {
 
 const keys = {};
 let moveSpeed = 0.05;
+let handMovement = 0;
+let isHandDetectionInitialized = false;
+
+// Initialize hand detection - ONLY IN VR MODE
+export async function initializeHandDetection() {
+  try {
+    const success = await handDetector.initialize();
+    if (success) {
+      handDetector.setHandStateCallback((isHandOpen) => {
+        // OPEN HAND = MOVE FORWARD
+        // CLOSED/NO HAND = STOP
+        handMovement = isHandOpen ? moveSpeed : 0;
+        console.log('Hand control:', isHandOpen ? 'OPEN → FORWARD' : 'CLOSED → STOP');
+      });
+      
+      console.log('Hand detection initialized - Ready for movement control');
+      isHandDetectionInitialized = true;
+      return true;
+    }
+  } catch (error) {
+    console.warn('Hand detection failed:', error);
+    isHandDetectionInitialized = false;
+    return false;
+  }
+}
+
+// Stop hand detection when exiting VR
+export function stopHandDetection() {
+  if (isHandDetectionInitialized) {
+    handDetector.stopDetection();
+    isHandDetectionInitialized = false;
+    handMovement = 0;
+    console.log('Hand detection stopped');
+  }
+}
 
 // Setup keyboard + mouse controls
 export function setupControls() {
@@ -94,10 +131,9 @@ export function setupControls() {
 export function updateMovement() {
   if (!renderer || !camera) return;
 
-  const moveTarget =
-    renderer.xr.isPresenting && dolly ? dolly : camera;
+  const moveTarget = renderer.xr.isPresenting && dolly ? dolly : camera;
 
-  // TOUJOURS utiliser la direction de la CAMÉRA pour le mouvement
+  // Get camera direction for movement
   const cameraWorldDirection = new THREE.Vector3();
   camera.getWorldDirection(cameraWorldDirection);
 
@@ -111,37 +147,15 @@ export function updateMovement() {
     forward.z,
     0,
     -forward.x
-  ).normalize(); // Perpendiculaire à forward
+  ).normalize();
 
-  // --- VR movement (controller thumbstick) ---
-  if (renderer.xr.isPresenting && controller1 && dolly) {
-    const session = renderer.xr.getSession();
-    if (session) {
-      for (const inputSource of session.inputSources) {
-        const gamepad = inputSource.gamepad;
-        if (gamepad && gamepad.axes.length >= 4) {
-          const [axisX, axisY] = [
-            gamepad.axes[2] || gamepad.axes[0],
-            gamepad.axes[3] || gamepad.axes[1],
-          ];
-          if (
-            Math.abs(axisX) > 0.1 ||
-            Math.abs(axisY) > 0.1
-          ) {
-            // MAINTENANT: Tous les mouvements sont relatifs à la direction de la tête
-            dolly.position.addScaledVector(
-              forward,
-              -axisY * moveSpeed
-            ); // Avant/arrière
-            dolly.position.addScaledVector(
-              right,
-              -axisX * moveSpeed
-            ); // Gauche/droite
-          }
-        }
-      }
+  // --- HAND GESTURE MOVEMENT (VR MODE ONLY) ---
+  if (renderer.xr.isPresenting && dolly && isHandDetectionInitialized) {
+    if (handMovement !== 0) {
+      dolly.position.addScaledVector(forward, handMovement);
     }
   }
+  
 
   // --- Desktop WASD movement ---
   if (!renderer.xr.isPresenting) {
@@ -172,89 +186,58 @@ export async function onButtonClicked() {
     const session = await navigator.xr.requestSession(
       'immersive-vr',
       {
-        optionalFeatures: ['local-floor', 'hand-tracking'],
+        optionalFeatures: ['local-floor'],
       }
     );
 
-    session.addEventListener('end', () =>
-      console.log('VR session ended')
-    );
+    // START VR SESSION FIRST
     await renderer.xr.setSession(session);
+    console.log('VR session started');
+
+    // WAIT A BIT FOR VR TO SETTLE, THEN START HAND DETECTION
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // NOW START HAND DETECTION
+    console.log('Starting hand detection for VR mode...');
+    await initializeHandDetection();
+
+    session.addEventListener('end', () => {
+      console.log('VR session ended');
+      stopHandDetection();
+    });
+    
   } catch (error) {
     console.error('Error starting VR session:', error);
     alert('Failed to start VR session: ' + error.message);
   }
 }
 
-export function setupVRControllers() {
+// SIMPLIFIED VR Setup - No controller movement, just head tracking
+export function setupVR() {
   if (!renderer || !scene || !camera) {
-    console.warn(
-      'setupVRControllers() called before initScene(). Call initScene() first.'
-    );
+    console.warn('setupVR() called before initScene(). Call initScene() first.');
     return;
   }
 
-  // Dolly (camera rig)
+  // Dolly (camera rig for head tracking only)
   dolly = new THREE.Group();
   dolly.position.set(0, -1.2, 0);
   dolly.add(camera);
   scene.add(dolly);
 
-  // Controller setup helper
-  function setupController(index) {
-    const controller = renderer.xr.getController(index);
-    controller.addEventListener('selectstart', onSelectStart);
-    controller.addEventListener('selectend', onSelectEnd);
-    controller.addEventListener('connected', (event) =>
-      controller.add(buildController(event.data))
-    );
-    controller.addEventListener('disconnected', function () {
-      if (this.children[0]) {
-        this.remove(this.children[0]);
-      }
-    });
-    dolly.add(controller);
-    return controller;
-  }
-
-  controller1 = setupController(0);
-  controller2 = setupController(1);
+  // NO CONTROLLERS - Movement is handled by hand detection only
+  console.log('VR setup complete - Movement controlled by hand gestures');
 }
 
-export function buildController(data) {
-  let geometry, material;
-  if (data.targetRayMode === 'tracked-pointer') {
-    geometry = new THREE.BufferGeometry();
-    geometry.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, -1], 3)
-    );
-    material = new THREE.LineBasicMaterial({ color: 0xffffff });
-    return new THREE.Line(geometry, material);
-  }
-  if (data.targetRayMode === 'gaze') {
-    geometry = new THREE.RingGeometry(0.02, 0.04, 32).translate(
-      0,
-      0,
-      -1
-    );
-    material = new THREE.MeshBasicMaterial({
-      opacity: 0.5,
-      transparent: true,
-    });
-    return new THREE.Mesh(geometry, material);
-  }
 
-  return null;
-}
 
-export function onSelectStart(event) {
-  event.target.userData.isSelecting = true;
-}
+//export function onSelectStart(event) {
+//  event.target.userData.isSelecting = true;
+//}
 
-export function onSelectEnd(event) {
-  event.target.userData.isSelecting = false;
-}
+//export function onSelectEnd(event) {
+//  event.target.userData.isSelecting = false;
+//}
 
 export function onWindowResize() {
   if (!camera || !renderer) return;
@@ -262,4 +245,17 @@ export function onWindowResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+
+
+
+// Get hand detection state
+export function getHandDetectionState() {
+  return handDetector.getHandState();
+}
+
+// Clean up
+export function cleanup() {
+  handDetector.stopDetection();
 }

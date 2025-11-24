@@ -1,4 +1,5 @@
-import { initScene, renderer, camera, scene, setupVRControllers, onButtonClicked, onWindowResize, updateMovement, setupControls, dolly } from './core/init.js';
+//import { initScene, renderer, camera, scene, setupVRControllers, onButtonClicked, onWindowResize, updateMovement, setupControls, dolly } from './core/init.js';
+import { initScene, renderer, camera, scene, setupVR, onButtonClicked, onWindowResize,updateMovement,  setupControls, dolly } from './core/init.js';
 import * as THREE from 'three';
 import { setupFlashlight } from './game/flashlight.js';
 import { setupAudio, playSound, playPositionalSound } from './game/audioManager.js';
@@ -152,7 +153,11 @@ async function start() {
   await initDynamicWorld();
   // Setup input controls and VR controllers after renderer is ready.
   setupControls();
-  setupVRControllers();
+  setupVR();
+      // ADD SMALL DELAY TO ENSURE MEDIAPIPE IS LOADED
+  await new Promise(resolve => setTimeout(resolve, 1000));
+    // ADD THIS LINE - Initialize hand detection
+    
   // Create a simple overlay for debug and game state information.
   infoDiv = document.createElement('div');
   infoDiv.id = 'gameInfo';
