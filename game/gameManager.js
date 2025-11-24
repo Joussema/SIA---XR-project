@@ -55,7 +55,7 @@ export class GameManager {
     const backwardRoomType = roomTypes[Math.floor(Math.random() * roomTypes.length)];
 
     // Randomly decide if an anomaly should appear (e.g., 50% chance).
-    const hasAnomaly = Math.random() < 0.5;
+    const hasAnomaly = Math.random() < 0.6;
     let anomalyType = null;
     let anomalyLocation = null;
 
@@ -67,21 +67,21 @@ export class GameManager {
       // 20% chance for Weeping Angel Room
       const rand = Math.random();
 
-      if (rand < 0.20) {
+      if (rand < 0) {
         const anomalyTypes = ['DEMON'];
         anomalyType = anomalyTypes[Math.floor(Math.random() * anomalyTypes.length)];
         anomalyLocation = 'forward';
-      } else if (rand < 0.40) {
+      } else if (rand < 0.25) {
         // The room itself is the anomaly
         forwardRoomType = 'scaryladyroom';
         anomalyType = 'ROOM';
         anomalyLocation = 'forward';
-      } else if (rand < 0.60) {
+      } else if (rand < 0.50) {
         // The room itself is the anomaly
         forwardRoomType = 'scarygang';
         anomalyType = 'ROOM';
         anomalyLocation = 'forward';
-      } else if (rand < 0.80) {
+      } else if (rand < 0.75) {
         // The room itself is the anomaly
         forwardRoomType = 'fiendroom';
         anomalyType = 'ROOM';
