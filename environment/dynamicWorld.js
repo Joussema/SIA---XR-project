@@ -40,19 +40,43 @@ let decisionMade = false;
 export async function initDynamicWorld() {
   if (templatesLoaded) return;
   const loader = new SimpleModelLoader(scene);
-  // Only load templates we need for dynamic branching.
-  const needed = ['bufferzone', 'corridor', 'sroom', 'scaryladyroom', 'scarygang', 'fiendroom', 'weepingangelroom'];
+  // Minimal set to load initially (smaller footprint for first render)
+  const essential = ['bufferzone', 'corridor', 'sroom'];
+  const lazy = ['scaryladyroom', 'scarygang', 'fiendroom', 'weepingangelroom'];
+
+  // Load essential templates first so the app can start quickly.
   for (const def of rooms) {
-    if (!needed.includes(def.id)) continue;
-    const glbRoot = await loader.load(def.modelPath, THREE);
-    // Remove from scene so we control when and how instances are added.
-    if (glbRoot.parent === scene) {
-      scene.remove(glbRoot);
+    if (!essential.includes(def.id)) continue;
+    try {
+      const glbRoot = await loader.load(def.modelPath, THREE);
+      if (glbRoot.parent === scene) scene.remove(glbRoot);
+      templates[def.id] = new RoomModule(glbRoot, def);
+    } catch (e) {
+      console.error('Failed to load essential template:', def.id, e);
     }
-    const tmpl = new RoomModule(glbRoot, def);
-    templates[def.id] = tmpl;
   }
   templatesLoaded = true;
+
+  // Kick off background loading of heavy/rare templates.
+  loadLazyTemplates(loader, lazy).catch(e => console.error('Failed to load lazy templates:', e));
+}
+
+async function loadLazyTemplates(loader, lazyIds) {
+  // Stagger loading to avoid network/CPU saturation.
+  for (const id of lazyIds) {
+    const def = rooms.find(r => r.id === id);
+    if (!def) continue;
+    // Small delay between loads to reduce bursty network usage
+    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      const glbRoot = await loader.load(def.modelPath, THREE);
+      if (glbRoot.parent === scene) scene.remove(glbRoot);
+      templates[def.id] = new RoomModule(glbRoot, def);
+      console.log('Lazy-loaded template:', id);
+    } catch (e) {
+      console.warn('Lazy load failed for template:', id, e);
+    }
+  }
 }
 
 /**
@@ -95,6 +119,11 @@ export function buildWorldForBlueprint(blueprint, fromBuffer = null) {
 
   // --- Forward branch ---
   const forwardTmpl = templates[blueprint.forwardRoomType] || templates['corridor'];
+  // If the requested template is missing, start a background load so future steps can use it.
+  if (!templates[blueprint.forwardRoomType]) {
+    const missing = blueprint.forwardRoomType;
+    backgroundLoadTemplate(missing);
+  }
   forwardRoom = forwardTmpl.clone();
   forwardBuffer = templates['bufferzone'].clone();
   // Snap the forward room to the centre: its start attaches to the centre's end.
@@ -106,6 +135,10 @@ export function buildWorldForBlueprint(blueprint, fromBuffer = null) {
 
   // --- Backward branch ---
   const backwardTmpl = templates[blueprint.backwardRoomType] || templates['corridor'];
+  if (!templates[blueprint.backwardRoomType]) {
+    const missing = blueprint.backwardRoomType;
+    backgroundLoadTemplate(missing);
+  }
   backwardRoom = backwardTmpl.clone();
   backwardBuffer = templates['bufferzone'].clone();
   // Snap the first backward room with a 180° flip: its start connects to the centre's start.
@@ -211,4 +244,25 @@ export function getRoomInstance(location) {
   if (location === 'forward') return forwardRoom;
   if (location === 'backward') return backwardRoom;
   return centerBuffer;
+}
+
+/**
+ * Trigger a background load of a template if it's not already available.
+ * This is intentionally fire-and-forget to avoid blocking the caller.
+ */
+function backgroundLoadTemplate(id) {
+  if (!id || templates[id]) return;
+  const def = rooms.find(r => r.id === id);
+  if (!def) return;
+  const loader = new SimpleModelLoader(scene);
+  (async () => {
+    try {
+      const glbRoot = await loader.load(def.modelPath, THREE);
+      if (glbRoot.parent === scene) scene.remove(glbRoot);
+      templates[def.id] = new RoomModule(glbRoot, def);
+      console.log('Background-loaded template:', id);
+    } catch (e) {
+      console.warn('Background load failed for template:', id, e);
+    }
+  })();
 }

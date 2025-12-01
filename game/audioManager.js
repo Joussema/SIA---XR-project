@@ -15,7 +15,8 @@ export function setupAudio(camera) {
     const audio = document.createElement('audio');
     audio.src = 'sounds/main_theme.mp3';
     audio.loop = true;
-    audio.preload = 'auto';
+    // Avoid preloading large music tracks; only load metadata until user interaction
+    audio.preload = 'none';
     audio.volume = 0.5;
 
     // Connect the audio element to the Three.js audio source
@@ -55,6 +56,28 @@ export function playSound(soundName) {
     const audio = new Audio(`sounds/${soundName}`);
     audio.volume = 1.0;
     audio.play().catch(e => console.error("Failed to play sound:", e));
+}
+
+export async function prefetchSound(soundName) {
+    if (!('caches' in window)) return;
+    try {
+        const cache = await caches.open('exit8-sounds-v1');
+        await cache.add(`sounds/${soundName}`);
+        console.log('Prefetched sound:', soundName);
+    } catch (e) {
+        console.warn('Failed to prefetch sound:', e);
+    }
+}
+
+export async function prefetchModel(modelPath) {
+    if (!('caches' in window)) return;
+    try {
+        const cache = await caches.open('exit8-models-v1');
+        await cache.add(modelPath);
+        console.log('Prefetched model:', modelPath);
+    } catch (e) {
+        console.warn('Failed to prefetch model:', e);
+    }
 }
 
 export function playPositionalSound(soundName, parentObject, refDistance = 2, maxDistance = 15) {

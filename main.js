@@ -2,7 +2,7 @@
 import { initScene, renderer, camera, scene, setupVR, onButtonClicked, onWindowResize,updateMovement,  setupControls, dolly } from './core/init.js';
 import * as THREE from 'three';
 import { setupFlashlight } from './game/flashlight.js';
-import { setupAudio, playSound, playPositionalSound } from './game/audioManager.js';
+import { setupAudio, playSound, playPositionalSound, prefetchSound, prefetchModel } from './game/audioManager.js';
 
 // Exit8 step-based imports
 import { GameManager } from './game/gameManager.js';
@@ -46,6 +46,21 @@ function updateOverlay() {
      </div>`;
 }
 
+// Prefetch forward/backward models and likely sounds in the background
+function prefetchBlueprintAssets(bp) {
+  if (!bp) return;
+  try {
+    prefetchModel(`models/${bp.forwardRoomType}.glb`);
+    prefetchModel(`models/${bp.backwardRoomType}.glb`);
+    if (bp.hasAnomaly && bp.anomalyType) {
+      // Example: if the anomaly type references a specific sound name use that. Map types as needed.
+      if (bp.anomalyType === 'DEMON') {
+        prefetchSound('fiend breath.mp3');
+      }
+    }
+  } catch (e) { console.warn('Prefetch failed:', e); }
+}
+
 function animate() {
   // Update player movement (keyboard or VR) first
   updateMovement();
@@ -81,7 +96,11 @@ function animate() {
     }
     // Update overlay to reflect new step.
     updateOverlay();
+    // Prefetch assets for the new blueprint in the background
+    prefetchBlueprintAssets(bp);
   }
+
+  // Note: `prefetchBlueprintAssets` is declared at the module top-level
 
   // --- NEW SOUND LOGIC START ---
   const state = gameManager.getState();
@@ -139,6 +158,8 @@ function animate() {
   // Render the scene
   renderer.render(scene, camera);
 }
+// Expose for debugging and manual prefetching via console.
+window.prefetchBlueprintAssets = prefetchBlueprintAssets;
 
 // === MAIN INIT ===
 // Wrap startup in an async function to allow awaiting GLB loading.
@@ -172,6 +193,8 @@ async function start() {
   // Build the initial world (step 0).
   const initialBlueprint = gameManager.getBlueprint(0);
   buildWorldForBlueprint(initialBlueprint, null);
+  // Prefetch assets for initial blueprint in the background
+  prefetchBlueprintAssets(initialBlueprint);
   // If the initial blueprint has an anomaly, spawn it now.
   if (initialBlueprint.hasAnomaly) {
     const roomInst = getRoomInstance(initialBlueprint.anomalyLocation);
@@ -214,3 +237,14 @@ if (activateButton) {
     activateButton.textContent = 'WebXR Not Supported';
   }
 }
+
+// Service Worker registration
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('Service Worker registered:', reg.scope))
+      .catch(err => console.warn('SW registration failed:', err));
+  });
+}
+
+// (PWA install prompt handling removed — app is no longer offering an inline install button)
