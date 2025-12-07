@@ -4,7 +4,8 @@ import { SimpleModelLoader } from './modelloader.js';
 import { RoomModule } from './roomModule.js';
 import { rooms } from './rooms.js';
 
-
+// Ajoute en haut avec les autres imports:
+import { collisionSystem } from './collisionSystem.js';
 
 // Map of template id to RoomModule instances. These templates are
 // loaded once from GLB files on init. Keys correspond to ids in
@@ -106,6 +107,7 @@ function clearWorld(fromBuffer) {
  */
 export function buildWorldForBlueprint(blueprint, fromBuffer = null) {
   // Remove current world, preserving fromBuffer if present.
+  collisionSystem.clear();
   clearWorld(fromBuffer);
   if (fromBuffer) {
     centerBuffer = fromBuffer;
@@ -165,6 +167,33 @@ export function buildWorldForBlueprint(blueprint, fromBuffer = null) {
   centerBB.expandByScalar(expansion);
   forwardBB.expandByScalar(expansion);
   backwardBB.expandByScalar(expansion);
+   // Centre buffer =visible collider 
+  if (centerBuffer && centerBuffer.root) {
+    collisionSystem.addCollider(centerBuffer.root, true);
+  }
+  
+  // Forward room = visible collider 
+  if (forwardRoom && forwardRoom.root) {
+    collisionSystem.addCollider(forwardRoom.root, true);
+  }
+  
+  // Forward buffer = visible collider 
+  if (forwardBuffer && forwardBuffer.root) {
+    collisionSystem.addCollider(forwardBuffer.root, true);
+  }
+  
+  // Backward room = visible collider 
+  if (backwardRoom && backwardRoom.root) {
+    collisionSystem.addCollider(backwardRoom.root, true);
+  }
+  
+  // Backward buffer = visible collider 
+  if (backwardBuffer && backwardBuffer.root) {
+    collisionSystem.addCollider(backwardBuffer.root, true);
+  }
+  
+  console.log(`🎮 ${collisionSystem.colliders.length} colliders created`);
+  
 
   // Reset decision detection state.
   lastBuffer = 'center';

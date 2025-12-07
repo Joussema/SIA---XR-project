@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { VRButton } from 'three/addons/webxr/VRButton.js';
 import { handDetector } from './hand-gestures.js';
 
+import { collisionSystem } from '../environment/collisionSystem.js';
 //f
 export let scene, camera, renderer;
 
@@ -132,6 +133,7 @@ export function updateMovement() {
   if (!renderer || !camera) return;
 
   const moveTarget = renderer.xr.isPresenting && dolly ? dolly : camera;
+  const currentPosition = moveTarget.position.clone();
 
   // Get camera direction for movement
   const cameraWorldDirection = new THREE.Vector3();
@@ -152,21 +154,50 @@ export function updateMovement() {
   // --- HAND GESTURE MOVEMENT (VR MODE ONLY) ---
   if (renderer.xr.isPresenting && dolly && isHandDetectionInitialized) {
     if (handMovement !== 0) {
-      dolly.position.addScaledVector(forward, handMovement);
+      const newPosition = currentPosition.clone();
+      newPosition.addScaledVector(forward, handMovement);
+      
+      // Utilise la NOUVELLE méthode
+      if (!collisionSystem.checkWallCollision(newPosition, currentPosition)) {
+        dolly.position.copy(newPosition);
+      }
     }
   }
-  
 
   // --- Desktop WASD movement ---
   if (!renderer.xr.isPresenting) {
-    if (keys['z'] || keys['arrowup'])
-      moveTarget.position.addScaledVector(forward, moveSpeed);
-    if (keys['s'] || keys['arrowdown'])
-      moveTarget.position.addScaledVector(forward, -moveSpeed);
-    if (keys['q'] || keys['arrowleft'])
-      moveTarget.position.addScaledVector(right, moveSpeed);
-    if (keys['d'] || keys['arrowright'])
-      moveTarget.position.addScaledVector(right, -moveSpeed);
+    let wantsToMove = false;
+    let direction = new THREE.Vector3(0, 0, 0);
+    
+    if (keys['z'] || keys['arrowup']) {
+      direction.add(forward);
+      wantsToMove = true;
+    }
+    if (keys['s'] || keys['arrowdown']) {
+      direction.sub(forward);
+      wantsToMove = true;
+    }
+    if (keys['q'] || keys['arrowleft']) {
+      direction.add(right);
+      wantsToMove = true;
+    }
+    if (keys['d'] || keys['arrowright']) {
+      direction.sub(right);
+      wantsToMove = true;
+    }
+    
+    if (wantsToMove) {
+      direction.normalize();
+      const newPosition = currentPosition.clone();
+      newPosition.addScaledVector(direction, moveSpeed);
+      
+      // Utilise la NOUVELLE méthode
+      if (!collisionSystem.checkWallCollision(newPosition, currentPosition)) {
+        moveTarget.position.copy(newPosition);
+      }
+    }
+    
+    // Up/Down movement
     if (keys[' ']) moveTarget.position.y += moveSpeed;
     if (keys['shift']) moveTarget.position.y -= moveSpeed;
   }
