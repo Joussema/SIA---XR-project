@@ -57,6 +57,7 @@ export function initScene() {
 
 const keys = {};
 let moveSpeed = 0.05;
+let xrMoveSpeed = 0.1; // Faster movement speed for XR mode
 let handMovement = 0;
 let isHandDetectionInitialized = false;
 
@@ -68,7 +69,7 @@ export async function initializeHandDetection() {
       handDetector.setHandStateCallback((isHandOpen) => {
         // OPEN HAND = MOVE FORWARD
         // CLOSED/NO HAND = STOP
-        handMovement = isHandOpen ? moveSpeed : 0;
+        handMovement = isHandOpen ? xrMoveSpeed : 0;
         console.log('Hand control:', isHandOpen ? 'OPEN → FORWARD' : 'CLOSED → STOP');
       });
       
