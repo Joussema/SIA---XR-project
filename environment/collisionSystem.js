@@ -6,6 +6,7 @@ export class CollisionSystem {
         this.colliders = [];
         this.playerRadius = 0.3; // Reduced a bit
         this.playerHeight = 1.8;
+        this.simplifiedColliders = []; // Simplified bounding boxes for performance
     }
     
     addCollider(object, visible = true) {
@@ -15,10 +16,24 @@ export class CollisionSystem {
                 child.userData.isCollider = true;
                 child.geometry.computeBoundingBox();
                 
+                const box = new THREE.Box3().setFromObject(child);
+                
                 this.colliders.push({
                     mesh: child,
-                    box: new THREE.Box3().setFromObject(child),
-                    isContainer: child.name && child.name.includes('room') // Example
+                    box: box,
+                    isContainer: child.name && child.name.includes('room')
+                });
+                
+                // Create simplified collider (just the bounding box) for fast checks
+                const center = new THREE.Vector3();
+                const size = new THREE.Vector3();
+                box.getCenter(center);
+                box.getSize(size);
+                
+                this.simplifiedColliders.push({
+                    center: center,
+                    size: size,
+                    box: box
                 });
             }
         });
@@ -83,33 +98,43 @@ export class CollisionSystem {
     }
     
     /**
-     * Alternative version: Check only the CONTACT POINT
+     * Smart collision check - only blocks if moving directly into a wall
+     * Uses raycasting in movement direction for accurate detection
      */
     checkWallCollision(newPosition, currentPosition) {
-        // Movement direction
+        // Only do collision check if we have colliders
+        if (this.simplifiedColliders.length === 0) return false;
+        
+        // Calculate movement direction
         const direction = new THREE.Vector3()
             .subVectors(newPosition, currentPosition)
             .normalize();
         
-        // Raycast from current position
+        const distance = currentPosition.distanceTo(newPosition);
+        
+        // Raycast from current position in movement direction
         const raycaster = new THREE.Raycaster(
             currentPosition,
             direction,
             0,
-            this.playerRadius + 0.1 // Detection distance
+            distance + this.playerRadius
         );
         
-        // List of collision meshes
-        const colliderMeshes = this.colliders.map(c => c.mesh);
+        // Check against only actual geometry (not bounding boxes)
+        const meshesToCheck = this.colliders
+            .filter(c => c.mesh && c.mesh.geometry)
+            .map(c => c.mesh);
         
-        const intersects = raycaster.intersectObjects(colliderMeshes, true);
+        if (meshesToCheck.length === 0) return false;
         
-        if (intersects.length > 0) {
-            console.log('🚫 Wall detected at distance:', intersects[0].distance);
-            return true;
+        const intersects = raycaster.intersectObjects(meshesToCheck, false);
+        
+        // Only block if we're hitting something very close (basically at contact)
+        if (intersects.length > 0 && intersects[0].distance < this.playerRadius + 0.1) {
+            return true; // Collision - too close to wall
         }
         
-        return false;
+        return false; // Safe to move
     }
     
     /**
@@ -141,6 +166,7 @@ export class CollisionSystem {
     
     clear() {
         this.colliders = [];
+        this.simplifiedColliders = [];
     }
     
     update() {

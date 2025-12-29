@@ -183,11 +183,51 @@ export class RoomModule {
 
   /**
    * Clone this RoomModule, including cloning its underlying Object3D.
+   * Optimized to share geometries and materials for better performance.
    *
    * @returns {RoomModule}
    */
   clone() {
-    const clonedRoot = this.root.clone(true);
+    // Clone the scene graph but share geometry/material references
+    const clonedRoot = new THREE.Group();
+    
+    // Recursively copy structure while sharing geometry and materials
+    const cloneNode = (source, target) => {
+      source.children.forEach((child) => {
+        let clonedChild;
+        if (child.isMesh) {
+          // Create new mesh but share geometry and material
+          clonedChild = new THREE.Mesh(child.geometry, child.material);
+          clonedChild.position.copy(child.position);
+          clonedChild.rotation.copy(child.rotation);
+          clonedChild.scale.copy(child.scale);
+          clonedChild.name = child.name;
+          clonedChild.castShadow = child.castShadow;
+          clonedChild.receiveShadow = child.receiveShadow;
+        } else if (child.isGroup || child.isObject3D) {
+          clonedChild = new THREE.Group();
+          clonedChild.position.copy(child.position);
+          clonedChild.rotation.copy(child.rotation);
+          clonedChild.scale.copy(child.scale);
+          clonedChild.name = child.name;
+        } else {
+          // For other types, do a shallow clone
+          clonedChild = child.clone();
+        }
+        
+        target.add(clonedChild);
+        
+        // Recursively clone children
+        if (child.children.length > 0) {
+          cloneNode(child, clonedChild);
+        }
+      });
+    };
+    
+    // Copy root properties
+    clonedRoot.name = this.root.name;
+    cloneNode(this.root, clonedRoot);
+    
     // Reset transform so the clone starts at identity orientation/position.
     clonedRoot.position.set(0, 0, 0);
     clonedRoot.quaternion.copy(this.initialQuaternion);

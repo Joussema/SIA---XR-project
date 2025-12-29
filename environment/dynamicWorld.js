@@ -41,9 +41,9 @@ let decisionMade = false;
 export async function initDynamicWorld() {
   if (templatesLoaded) return;
   const loader = new SimpleModelLoader(scene);
-  // Minimal set to load initially (smaller footprint for first render)
-  const essential = ['bufferzone', 'corridor', 'sroom'];
-  const lazy = ['scaryladyroom', 'scarygang', 'fiendroom', 'weepingangelroom'];
+  // Minimal set to load initially (only what's needed for first step)
+  const essential = ['bufferzone', 'corridor'];
+  const lazy = ['sroom', 'scaryladyroom', 'scarygang', 'fiendroom', 'weepingangelroom'];
 
   // Load essential templates first so the app can start quickly.
   for (const def of rooms) {
@@ -57,6 +57,7 @@ export async function initDynamicWorld() {
     }
   }
   templatesLoaded = true;
+  console.log('✅ Essential templates loaded, starting game');
 
   // Kick off background loading of heavy/rare templates.
   loadLazyTemplates(loader, lazy).catch(e => console.error('Failed to load lazy templates:', e));
@@ -67,17 +68,18 @@ async function loadLazyTemplates(loader, lazyIds) {
   for (const id of lazyIds) {
     const def = rooms.find(r => r.id === id);
     if (!def) continue;
-    // Small delay between loads to reduce bursty network usage
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Longer delay between loads to reduce lag spikes
+    await new Promise(resolve => setTimeout(resolve, 1000));
     try {
       const glbRoot = await loader.load(def.modelPath, THREE);
       if (glbRoot.parent === scene) scene.remove(glbRoot);
       templates[def.id] = new RoomModule(glbRoot, def);
-      console.log('Lazy-loaded template:', id);
+      console.log('📦 Lazy-loaded template:', id);
     } catch (e) {
       console.warn('Lazy load failed for template:', id, e);
     }
   }
+  console.log('✅ All templates loaded');
 }
 
 /**
@@ -107,7 +109,7 @@ function clearWorld(fromBuffer) {
  */
 export function buildWorldForBlueprint(blueprint, fromBuffer = null) {
   // Remove current world, preserving fromBuffer if present.
-  collisionSystem.clear();
+  // Defer collision system update until after all objects are positioned
   clearWorld(fromBuffer);
   if (fromBuffer) {
     centerBuffer = fromBuffer;
@@ -167,34 +169,20 @@ export function buildWorldForBlueprint(blueprint, fromBuffer = null) {
   centerBB.expandByScalar(expansion);
   forwardBB.expandByScalar(expansion);
   backwardBB.expandByScalar(expansion);
-   // Centre buffer =visible collider 
-  if (centerBuffer && centerBuffer.root) {
-    collisionSystem.addCollider(centerBuffer.root, true);
-  }
   
-  // Forward room = visible collider 
-  if (forwardRoom && forwardRoom.root) {
-    collisionSystem.addCollider(forwardRoom.root, true);
-  }
+  // Batch collision updates to reduce overhead
+  collisionSystem.clear();
+  const colliderRoots = [
+    centerBuffer?.root,
+    forwardRoom?.root,
+    forwardBuffer?.root,
+    backwardRoom?.root,
+    backwardBuffer?.root
+  ].filter(Boolean);
   
-  // Forward buffer = visible collider 
-  if (forwardBuffer && forwardBuffer.root) {
-    collisionSystem.addCollider(forwardBuffer.root, true);
-  }
+  // Add all colliders at once
+  colliderRoots.forEach(root => collisionSystem.addCollider(root, true));
   
-  // Backward room = visible collider 
-  if (backwardRoom && backwardRoom.root) {
-    collisionSystem.addCollider(backwardRoom.root, true);
-  }
-  
-  // Backward buffer = visible collider 
-  if (backwardBuffer && backwardBuffer.root) {
-    collisionSystem.addCollider(backwardBuffer.root, true);
-  }
-  
-  console.log(`🎮 ${collisionSystem.colliders.length} colliders created`);
-  
-
   // Reset decision detection state.
   lastBuffer = 'center';
   decisionMade = false;

@@ -59,25 +59,36 @@ export function playSound(soundName) {
 }
 
 export async function prefetchSound(soundName) {
+    // Throttled prefetch - use setTimeout to defer from main thread
     if (!('caches' in window)) return;
-    try {
-        const cache = await caches.open('exit8-sounds-v1');
-        await cache.add(`sounds/${soundName}`);
-        console.log('Prefetched sound:', soundName);
-    } catch (e) {
-        console.warn('Failed to prefetch sound:', e);
-    }
+    setTimeout(async () => {
+        try {
+            const cache = await caches.open('exit8-sounds-v1');
+            const url = `sounds/${soundName}`;
+            const cached = await cache.match(url);
+            if (!cached) {
+                await cache.add(url);
+            }
+        } catch (e) {
+            console.warn('Failed to prefetch sound:', soundName);
+        }
+    }, 100); // Defer to next event loop
 }
 
 export async function prefetchModel(modelPath) {
+    // Throttled prefetch - use setTimeout to defer from main thread
     if (!('caches' in window)) return;
-    try {
-        const cache = await caches.open('exit8-models-v1');
-        await cache.add(modelPath);
-        console.log('Prefetched model:', modelPath);
-    } catch (e) {
-        console.warn('Failed to prefetch model:', e);
-    }
+    setTimeout(async () => {
+        try {
+            const cache = await caches.open('exit8-models-v1');
+            const cached = await cache.match(modelPath);
+            if (!cached) {
+                await cache.add(modelPath);
+            }
+        } catch (e) {
+            console.warn('Failed to prefetch model:', modelPath);
+        }
+    }, 100); // Defer to next event loop
 }
 
 export function playPositionalSound(soundName, parentObject, refDistance = 2, maxDistance = 15) {

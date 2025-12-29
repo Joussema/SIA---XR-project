@@ -24,6 +24,8 @@ const gameManager = new GameManager();
 // UI element for displaying game state and blueprint information.
 let infoDiv;
 
+
+
 function updateOverlay() {
   if (!infoDiv) return;
   const state = gameManager.getState();
@@ -33,6 +35,9 @@ function updateOverlay() {
   // blueprint used to build the world it will reflect the current
   // layout.
   const bp = gameManager.getBlueprint(state.currentStep);
+  
+ 
+  
   infoDiv.innerHTML =
     `<div style="background: rgba(0,0,0,0.5); padding: 8px; font-family: sans-serif;">
       <strong>Step:</strong> ${state.currentStep}<br/>
@@ -62,6 +67,17 @@ function prefetchBlueprintAssets(bp) {
 }
 
 function animate() {
+  // Calculate FPS
+  const currentTime = performance.now();
+  frameCount++;
+  if (currentTime >= lastTime + 1000) {
+    fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+    frameCount = 0;
+    lastTime = currentTime;
+    // Only update overlay once per second, not every frame
+    updateOverlay();
+  }
+  
   // Update player movement (keyboard or VR) first
   updateMovement();
 
@@ -72,89 +88,64 @@ function animate() {
   // Check if the player has made a decision.
   const decision = getDecisionForPlayer(playerPos);
   if (decision) {
-    // Register the decision with the game manager. This updates state and
-    // increments the step counter.
     gameManager.registerDecision(decision);
-    // Clear any existing anomaly from the previous step.
     clearAnomaly();
-    // Determine which buffer becomes the new centre based on the player's choice.
     const chosenBuffer = getBufferInstance(decision);
-    // Retrieve the blueprint for the new step.
     const bp = gameManager.getBlueprint(gameManager.currentStep);
-    // Rebuild the world around the chosen buffer.
     buildWorldForBlueprint(bp, chosenBuffer);
-    // If the blueprint specifies an anomaly, spawn it in the appropriate room.
     if (bp.hasAnomaly) {
       const roomInst = getRoomInstance(bp.anomalyLocation);
       if (roomInst && roomInst.root) {
-        // Compute spawn position as the centre of the room's bounding box.
         const bbox = new THREE.Box3().setFromObject(roomInst.root);
         const pos = new THREE.Vector3();
         bbox.getCenter(pos);
         spawnAnomalyManual(bp.anomalyType, pos);
       }
     }
-    // Update overlay to reflect new step.
     updateOverlay();
-    // Prefetch assets for the new blueprint in the background
-    prefetchBlueprintAssets(bp);
+    // Prefetch assets for the new blueprint in the background (deferred)
+    setTimeout(() => prefetchBlueprintAssets(bp), 200);
   }
 
-  // Note: `prefetchBlueprintAssets` is declared at the module top-level
+  // Sound logic - only check every 10 frames for performance
+  if (frameCount % 10 === 0) {
+    const state = gameManager.getState();
+    const bp = gameManager.getBlueprint(state.currentStep);
 
-  // --- NEW SOUND LOGIC START ---
-  const state = gameManager.getState();
-  const bp = gameManager.getBlueprint(state.currentStep);
+    if (bp.forwardRoomType === 'scaryladyroom' || bp.forwardRoomType === 'scarygang' || bp.forwardRoomType === 'fiendroom') {
+      const forwardRoom = getRoomInstance('forward');
+      if (forwardRoom && forwardRoom.root) {
+        const roomPos = new THREE.Vector3();
+        forwardRoom.root.getWorldPosition(roomPos);
+        const dist = playerPos.distanceTo(roomPos);
 
-  // We only care if the forward room is one of our scary rooms
-  if (bp.forwardRoomType === 'scaryladyroom' || bp.forwardRoomType === 'scarygang' || bp.forwardRoomType === 'fiendroom') {
-    // Get the forward room instance
-    const forwardRoom = getRoomInstance('forward');
-    if (forwardRoom && forwardRoom.root) {
-      // The root of the room is placed at the entrance connection point.
-      // We check if the player is close to this point (entering the room).
-      const roomPos = new THREE.Vector3();
-      forwardRoom.root.getWorldPosition(roomPos);
-
-      const dist = playerPos.distanceTo(roomPos);
-
-      // Threshold: 10 units seems reasonable for "entering" the room
-      if (dist < 10.0) {
-        // Check if we already played the sound for this step
-        if (!gameManager.soundPlayedForStep) {
-          if (bp.forwardRoomType === 'scaryladyroom') {
-            playSound('Lady statue.mp3');
-          } else if (bp.forwardRoomType === 'scarygang') {
-            playSound('Gang sound.mp3');
-          } else if (bp.forwardRoomType === 'fiendroom') {
-            // Create a dummy object for the sound source
-            // Position it slightly into the room (e.g., +Z is forward into the room from entrance?)
-            // Actually, forward room is snapped to center end.
-            // Let's assume a position relative to the room root.
-            const soundSource = new THREE.Object3D();
-            // Place it somewhere in the room. 
-            // Room root is at entrance.
-            soundSource.position.set(3, 4, -4);
-            forwardRoom.root.add(soundSource);
-            playPositionalSound('fiend breath.mp3', soundSource, 5, 20);
+        if (dist < 10.0) {
+          if (!gameManager.soundPlayedForStep) {
+            if (bp.forwardRoomType === 'scaryladyroom') {
+              playSound('Lady statue.mp3');
+            } else if (bp.forwardRoomType === 'scarygang') {
+              playSound('Gang sound.mp3');
+            } else if (bp.forwardRoomType === 'fiendroom') {
+              const soundSource = new THREE.Object3D();
+              soundSource.position.set(3, 4, -4);
+              forwardRoom.root.add(soundSource);
+              playPositionalSound('fiend breath.mp3', soundSource, 5, 20);
+            }
+            gameManager.soundPlayedForStep = true;
           }
-          gameManager.soundPlayedForStep = true;
         }
       }
     }
+
+    if (gameManager.lastStepChecked !== state.currentStep) {
+      gameManager.soundPlayedForStep = false;
+      gameManager.lastStepChecked = state.currentStep;
+    }
   }
 
-  // Reset sound flag if we moved to a new step (simple check)
-  if (gameManager.lastStepChecked !== state.currentStep) {
-    gameManager.soundPlayedForStep = false;
-    gameManager.lastStepChecked = state.currentStep;
-  }
-  // --- NEW SOUND LOGIC END ---
-
-  // Update any active anomalies (animation and cleanup of lifetime).
+  // Update anomalies (already throttled internally)
   updateAnomalies();
-  // Refresh overlay continuously in case of dynamic changes (e.g. VR session).
-  updateOverlay();
+  
   // Render the scene
   renderer.render(scene, camera);
 }
@@ -238,7 +229,7 @@ if (activateButton) {
   }
 }
 
-// Service Worker registration
+// Service Worker registration - Re-enabled with optimizations
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')

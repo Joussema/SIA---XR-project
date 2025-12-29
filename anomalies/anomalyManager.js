@@ -21,6 +21,10 @@ let playerDirectionAtWarning = null;
 let warningStartTime = null;
 const WARNING_DURATION = 5000; // 5 seconds to change direction
 
+// Performance optimization: limit update frequency
+let lastUpdateTime = 0;
+const UPDATE_INTERVAL = 50; // Update every 50ms instead of every frame (16ms)
+
 // === Utility ===
 function getCameraPosition() {
   if (renderer.xr?.isPresenting && dolly) return dolly.position.clone();
@@ -130,8 +134,9 @@ function createFireBlockade(a, playerPos) {
   const backFireStart = playerPos.clone().add(backward.clone().multiplyScalar(2));
   const backFireEnd = playerPos.clone().add(backward.clone().multiplyScalar(6));
 
-  a.fireGroups.push(createFire(frontFireStart, frontFireEnd, 20));
-  a.fireGroups.push(createFire(backFireStart, backFireEnd, 20));
+  // Reduced fire count from 20 to 10 for better performance
+  a.fireGroups.push(createFire(frontFireStart, frontFireEnd, 10));
+  a.fireGroups.push(createFire(backFireStart, backFireEnd, 10));
 
   const blockadeLight = new THREE.PointLight(0xff0000, 2, 15);
   blockadeLight.position.copy(playerPos);
@@ -157,6 +162,12 @@ function cleanupAnomaly(a) {
 // === Main update loop ===
 export function updateAnomalies() {
   const now = Date.now();
+  
+  // Performance: Skip updates if called too frequently
+  if (now - lastUpdateTime < UPDATE_INTERVAL) {
+    return; // Skip this frame
+  }
+  lastUpdateTime = now;
 
   // Handle dire stone warning timeout
   if (direStoneWarning && warningStartTime) {

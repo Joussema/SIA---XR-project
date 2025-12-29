@@ -21,10 +21,24 @@ export function initScene() {
   );
   camera.position.set(0, 0, 1);
 
-  // Renderer
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  // Renderer with MAXIMUM performance optimizations
+  renderer = new THREE.WebGLRenderer({ 
+    antialias: false, // Disable antialiasing for performance
+    powerPreference: 'high-performance',
+    stencil: false,
+    depth: true,
+    logarithmicDepthBuffer: false
+  });
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(1); // Force 1x pixel ratio for maximum FPS
   renderer.xr.enabled = true;
+  
+  // Disable ALL expensive features
+  renderer.shadowMap.enabled = false;
+  renderer.shadowMap.autoUpdate = false;
+  renderer.sortObjects = false;
+  renderer.autoClear = true;
+  
   document.body.appendChild(renderer.domElement);
   document.body.appendChild(VRButton.createButton(renderer));
 
@@ -35,6 +49,8 @@ export function initScene() {
   // Very dim ambient light to prevent absolute pitch blackness
   const ambientLight = new THREE.AmbientLight(0x111111);
   scene.add(ambientLight);
+  
+  console.log('🚀 Scene initialized - MAXIMUM PERFORMANCE MODE');
 }
 
 //////////////////////////////////////
