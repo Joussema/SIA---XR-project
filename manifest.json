@@ -1,0 +1,24 @@
+{
+  "name": "Exit8",
+  "short_name": "Exit8",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "description": "An XR experience with dynamic rooms and anomalies.",
+  "icons": [
+    {
+      "src": "/images/IsisL.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/IsisL.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
