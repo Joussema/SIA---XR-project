@@ -11,7 +11,7 @@ export class CollisionSystem {
   }
 
   addCollider(object, visible = true) {
-    object.traverse((child) => {
+   object.traverse((child) => {
       if (child.isMesh) {
         // Only create a collider if the name contains "Cube"
         if (!child.name || !child.name.includes('Cube')) return;
