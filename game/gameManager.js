@@ -67,6 +67,8 @@ export class GameManager {
       // ~17% each for different anomaly types
       const rand = Math.random();
 
+      
+
       if (rand < 0.20) {
         // The room itself is the anomaly
         forwardRoomType = 'scaryladyroom';

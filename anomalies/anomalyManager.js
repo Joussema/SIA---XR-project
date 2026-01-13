@@ -3,15 +3,9 @@ import { renderer, camera, scene, dolly } from '../core/init.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 let currentAnomaly = null;
-// Periodic spawning has been disabled. The dynamic game logic now
-// explicitly triggers anomalies when appropriate, so the manager
-// maintains currentAnomaly only. These variables remain for API
-// compatibility but are no longer used.
 let lastSpawnTime = 0;
 const ANOMALY_PERIOD = 10000;
 
-// Manual configuration values are no longer used. Anomalies are
-// spawned explicitly via exported helper functions.
 const MANUAL_EVENT = '';
 const MANUAL_STONE_POSITION = new THREE.Vector3(0, -1, -3);
 
@@ -80,7 +74,7 @@ export function updateAnomalies() {
   if (now - lastUpdateTime < UPDATE_INTERVAL) {
     return; // Skip this frame
   }
-  lastUpdateTime = now;
+  // Note: lastUpdateTime is updated at the end to ensure dt calculation covers the full interval
 
   // Update and remove after lifetime
   if (currentAnomaly) {
@@ -94,12 +88,16 @@ export function updateAnomalies() {
     } else {
       switch (currentAnomaly.type) {
         case 'WEEPING_ANGEL':
-          updateWeepingAngel(currentAnomaly, progress);
+          // Calculate delta time in seconds
+          const dt = (now - lastUpdateTime) / 1000;
+          updateWeepingAngel(currentAnomaly, progress, dt);
           break;
       }
     }
   }
+  lastUpdateTime = now; // Update timestamp after processing
 }
+
 
 // === External API ===
 /**
@@ -133,6 +131,7 @@ function createWeepingAngel(a) {
   // Configuration
   const SPAWN_OFFSET = new THREE.Vector3(2.96, 2, 4); // Spawn at the end of the room (relative to center)
   const INITIAL_ROTATION_Y = -Math.PI / 2; // 90 degrees
+  const DROP_Y = -1; // Target Y position when moving
 
   // Load the Weeping Angel model
   const loader = new GLTFLoader();
@@ -176,7 +175,7 @@ function createWeepingAngel(a) {
         activationDistance: 2.0, // Configurable offset: smaller = deeper into room
         timeNotLooking: 0, // Timer for delay
         hasDropped: false, // Track if it has dropped to floor
-        dropY: -1, // Target Y position when moving
+        dropY: DROP_Y, // Target Y position when moving
         isPlayingSound: false,
         currentSound: null
       };
@@ -188,7 +187,7 @@ function createWeepingAngel(a) {
   );
 }
 
-function updateWeepingAngel(a, progress) {
+function updateWeepingAngel(a, progress, dt) {
   if (!a.meshes.length || !a.state) return;
 
   const angel = a.meshes[0];
@@ -215,8 +214,8 @@ function updateWeepingAngel(a, progress) {
 
     if (!isLooking) {
 
-      // Better: use performance.now() diff if possible, but for now let's use a small increment.
-      a.state.timeNotLooking += 1 / 60;
+      // Use delta time for accurate timing
+      a.state.timeNotLooking += dt;
 
       if (a.state.timeNotLooking > 1.0) {
         // 3. Movement Logic
@@ -231,7 +230,7 @@ function updateWeepingAngel(a, progress) {
         const moveDir = new THREE.Vector3().subVectors(playerPos, angel.position).normalize();
         moveDir.y = 0;
 
-        const moveStep = moveDir.multiplyScalar(a.state.speed * 0.02);
+        const moveStep = moveDir.multiplyScalar(a.state.speed * dt);
         angel.position.add(moveStep);
 
         // Make angel face the player

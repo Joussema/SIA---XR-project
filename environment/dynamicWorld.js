@@ -42,8 +42,8 @@ export async function initDynamicWorld() {
   if (templatesLoaded) return;
   const loader = new SimpleModelLoader(scene);
   // Minimal set to load initially (only what's needed for first step)
-  const essential = ['bufferzone', 'corridor'];
-  const lazy = ['sroom', 'scaryladyroom', 'scarygang', 'fiendroom', 'weepingangelroom', 'deadend'];
+  const essential = ['bufferzone', 'corridor', 'weepingangelroom'];
+  const lazy = ['sroom', 'scaryladyroom', 'scarygang', 'fiendroom', 'deadend'];
 
   // Load essential templates first so the app can start quickly.
   for (const def of rooms) {
@@ -74,7 +74,7 @@ async function loadLazyTemplates(loader, lazyIds) {
       const glbRoot = await loader.load(def.modelPath, THREE);
       if (glbRoot.parent === scene) scene.remove(glbRoot);
       templates[def.id] = new RoomModule(glbRoot, def);
-      console.log('📦 Lazy-loaded template:', id);
+      console.log(' Lazy-loaded template:', id);
     } catch (e) {
       console.warn('Lazy load failed for template:', id, e);
     }
@@ -88,7 +88,7 @@ async function loadLazyTemplates(loader, lazyIds) {
  *   the new centre, or null to discard everything.
  */
 function clearWorld(fromBuffer) {
-  const toRemove = [centerBuffer, forwardRoom, forwardBuffer, backwardRoom, backwardBuffer];
+  const toRemove = [forwardRoom, forwardBuffer, backwardRoom, backwardBuffer];
   toRemove.forEach((inst) => {
     if (inst && inst.root && (!fromBuffer || inst.root !== fromBuffer.root)) {
       scene.remove(inst.root);
