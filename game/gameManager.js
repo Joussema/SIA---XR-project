@@ -64,26 +64,27 @@ export class GameManager {
       // ~17% each for different anomaly types
       const rand = Math.random();
 
-      if (rand < 0.17) {
-        // Grass Added anomaly
-        anomalyType = 'GRASS_ADDED';
-        anomalyLocation = 'forward';
-      } else if (rand < 0.34) {
+      if (rand < 0.20) {
         // The room itself is the anomaly
         forwardRoomType = 'scaryladyroom';
         anomalyType = 'ROOM';
         anomalyLocation = 'forward';
-      } else if (rand < 0.51) {
+      } else if (rand < 0.40) {
         // The room itself is the anomaly
         forwardRoomType = 'scarygang';
         anomalyType = 'ROOM';
         anomalyLocation = 'forward';
-      } else if (rand < 0.68) {
+      } else if (rand < 0.60) {
         // The room itself is the anomaly
         forwardRoomType = 'fiendroom';
         anomalyType = 'ROOM';
         anomalyLocation = 'forward';
-      } else if (rand < 0.84) {
+      } else if (rand < 0.70) {
+        // The room itself is the anomaly
+        forwardRoomType = 'grassroom';
+        anomalyType = 'ROOM';
+        anomalyLocation = 'forward';
+      } else if (rand < 0.85) {
         // Weeping Angel Anomaly
         forwardRoomType = 'weepingangelroom';
         anomalyType = 'WEEPING_ANGEL';
