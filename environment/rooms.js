@@ -143,4 +143,24 @@ export const rooms = [
       },
     ],
   },
+  {
+    id: 'grassroom',
+    modelPath: 'models/grassroom.glb',
+    defaultUp: [0, 1, 0],
+    preRotation: 0,
+    entrances: [
+      {
+        id: 'start',
+        // Same as corridor
+        position: [10, 2, 16],
+        forward: [0, 0, 1],
+      },
+      {
+        id: 'end',
+        // Same as corridor
+        position: [-10, 2, -16],
+        forward: [0, 0, -1],
+      },
+    ],
+  },
 ];
