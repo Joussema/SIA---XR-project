@@ -60,36 +60,37 @@ export class GameManager {
     let anomalyLocation = null;
 
     if (hasAnomaly) {
-      // 20% chance for standard Demon anomaly
-      // 20% chance for Scary Lady Room
-      // 20% chance for Scary Gang Room
-      // 20% chance for Fiend Room
-      // 20% chance for Weeping Angel Room
+      // Distribute anomaly chances:
+      // ~17% each for different anomaly types
       const rand = Math.random();
 
-      if (rand < 0) {
-        const anomalyTypes = ['DEMON'];
-        anomalyType = anomalyTypes[Math.floor(Math.random() * anomalyTypes.length)];
+      if (rand < 0.17) {
+        // Grass Added anomaly
+        anomalyType = 'GRASS_ADDED';
         anomalyLocation = 'forward';
-      } else if (rand < 0.25) {
+      } else if (rand < 0.34) {
         // The room itself is the anomaly
         forwardRoomType = 'scaryladyroom';
         anomalyType = 'ROOM';
         anomalyLocation = 'forward';
-      } else if (rand < 0.50) {
+      } else if (rand < 0.51) {
         // The room itself is the anomaly
         forwardRoomType = 'scarygang';
         anomalyType = 'ROOM';
         anomalyLocation = 'forward';
-      } else if (rand < 0.75) {
+      } else if (rand < 0.68) {
         // The room itself is the anomaly
         forwardRoomType = 'fiendroom';
         anomalyType = 'ROOM';
         anomalyLocation = 'forward';
-      } else {
+      } else if (rand < 0.84) {
         // Weeping Angel Anomaly
         forwardRoomType = 'weepingangelroom';
         anomalyType = 'WEEPING_ANGEL';
+        anomalyLocation = 'forward';
+      } else {
+        // Demon anomaly
+        anomalyType = 'DEMON';
         anomalyLocation = 'forward';
       }
     }
