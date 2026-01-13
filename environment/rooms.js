@@ -163,4 +163,24 @@ export const rooms = [
       },
     ],
   },
+  {
+    id: 'deadend',
+    modelPath: 'models/deadend.glb',
+    defaultUp: [0, 1, 0],
+    preRotation: 0,
+    entrances: [
+      {
+        id: 'start',
+        // Standard room entrance
+        position: [0, 2, -2],
+        forward: [0, 0, -1],
+      },
+      {
+        id: 'end',
+        // Standard room exit
+        position: [0, 2, -20],
+        forward: [0, 0, 1],
+      },
+    ],
+  },
 ];

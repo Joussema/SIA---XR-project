@@ -52,7 +52,10 @@ export class GameManager {
 
     // Randomly choose room type for forward and backward branches.
     let forwardRoomType = roomTypes[Math.floor(Math.random() * roomTypes.length)];
-    const backwardRoomType = roomTypes[Math.floor(Math.random() * roomTypes.length)];
+    // If forward room is 'sroom', force backward path to be a deadend to prevent confusion.
+    // Otherwise, use 'bufferzone' for smooth backward transition.
+    // Logic moved to end of function to respect anomaly overrides.
+    const backwardRoomType_placeholder = 'bufferzone'; // Temporary, will be set correctly at return.
 
     // Randomly decide if an anomaly should appear (e.g., 50% chance).
     const hasAnomaly = Math.random() < 0.6;
@@ -100,10 +103,13 @@ export class GameManager {
     // If there is no anomaly, the correct decision is to keep going forward.
     const expectedDecision = hasAnomaly ? 'backward' : 'forward';
 
+    // Finalize backward room type based on the FINAL forward room type (after anomalies)
+    const finalBackwardRoomType = (forwardRoomType === 'sroom') ? 'deadend' : 'bufferzone';
+
     return {
       index: stepIndex,
       forwardRoomType,
-      backwardRoomType,
+      backwardRoomType: finalBackwardRoomType,
       hasAnomaly,
       anomalyType,
       anomalyLocation,

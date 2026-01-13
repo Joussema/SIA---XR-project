@@ -43,7 +43,7 @@ export async function initDynamicWorld() {
   const loader = new SimpleModelLoader(scene);
   // Minimal set to load initially (only what's needed for first step)
   const essential = ['bufferzone', 'corridor'];
-  const lazy = ['sroom', 'scaryladyroom', 'scarygang', 'fiendroom', 'weepingangelroom'];
+  const lazy = ['sroom', 'scaryladyroom', 'scarygang', 'fiendroom', 'weepingangelroom', 'deadend'];
 
   // Load essential templates first so the app can start quickly.
   for (const def of rooms) {
@@ -57,7 +57,7 @@ export async function initDynamicWorld() {
     }
   }
   templatesLoaded = true;
-  console.log('✅ Essential templates loaded, starting game');
+  console.log(' Essential templates loaded, starting game');
 
   // Kick off background loading of heavy/rare templates.
   loadLazyTemplates(loader, lazy).catch(e => console.error('Failed to load lazy templates:', e));
@@ -79,7 +79,7 @@ async function loadLazyTemplates(loader, lazyIds) {
       console.warn('Lazy load failed for template:', id, e);
     }
   }
-  console.log('✅ All templates loaded');
+  console.log(' All templates loaded');
 }
 
 /**
@@ -88,7 +88,7 @@ async function loadLazyTemplates(loader, lazyIds) {
  *   the new centre, or null to discard everything.
  */
 function clearWorld(fromBuffer) {
-  const toRemove = [forwardRoom, forwardBuffer, backwardRoom, backwardBuffer];
+  const toRemove = [centerBuffer, forwardRoom, forwardBuffer, backwardRoom, backwardBuffer];
   toRemove.forEach((inst) => {
     if (inst && inst.root && (!fromBuffer || inst.root !== fromBuffer.root)) {
       scene.remove(inst.root);
@@ -169,7 +169,7 @@ export function buildWorldForBlueprint(blueprint, fromBuffer = null) {
   centerBB.expandByScalar(expansion);
   forwardBB.expandByScalar(expansion);
   backwardBB.expandByScalar(expansion);
-  
+
   // Batch collision updates to reduce overhead
   collisionSystem.clear();
   const colliderRoots = [
@@ -179,10 +179,10 @@ export function buildWorldForBlueprint(blueprint, fromBuffer = null) {
     backwardRoom?.root,
     backwardBuffer?.root
   ].filter(Boolean);
-  
+
   // Add all colliders at once
   colliderRoots.forEach(root => collisionSystem.addCollider(root, true));
-  
+
   // Reset decision detection state.
   lastBuffer = 'center';
   decisionMade = false;
