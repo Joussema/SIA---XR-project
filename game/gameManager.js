@@ -87,14 +87,10 @@ export class GameManager {
         forwardRoomType = 'grassroom';
         anomalyType = 'ROOM';
         anomalyLocation = 'forward';
-      } else if (rand < 0.85) {
+      } else {
         // Weeping Angel Anomaly
         forwardRoomType = 'weepingangelroom';
         anomalyType = 'WEEPING_ANGEL';
-        anomalyLocation = 'forward';
-      } else {
-        // Demon anomaly
-        anomalyType = 'DEMON';
         anomalyLocation = 'forward';
       }
     }

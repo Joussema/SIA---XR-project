@@ -1,5 +1,5 @@
 //import { initScene, renderer, camera, scene, setupVRControllers, onButtonClicked, onWindowResize, updateMovement, setupControls, dolly } from './core/init.js';
-import { initScene, renderer, camera, scene, setupVR, onButtonClicked, onWindowResize,updateMovement,  setupControls, dolly } from './core/init.js';
+import { initScene, renderer, camera, scene, setupVR, onButtonClicked, onWindowResize, updateMovement, setupControls, dolly } from './core/init.js';
 import * as THREE from 'three';
 import { setupFlashlight } from './game/flashlight.js';
 import { setupAudio, playSound, playPositionalSound, prefetchSound, prefetchModel } from './game/audioManager.js';
@@ -84,9 +84,7 @@ function prefetchBlueprintAssets(bp) {
     prefetchModel(`models/${bp.backwardRoomType}.glb`);
     if (bp.hasAnomaly && bp.anomalyType) {
       // Example: if the anomaly type references a specific sound name use that. Map types as needed.
-      if (bp.anomalyType === 'DEMON') {
-        prefetchSound('fiend breath.mp3');
-      }
+
     }
   } catch (e) { console.warn('Prefetch failed:', e); }
 }
@@ -210,10 +208,10 @@ async function start() {
   // Setup input controls and VR controllers after renderer is ready.
   setupControls();
   setupVR();
-      // ADD SMALL DELAY TO ENSURE MEDIAPIPE IS LOADED
+  // ADD SMALL DELAY TO ENSURE MEDIAPIPE IS LOADED
   await new Promise(resolve => setTimeout(resolve, 1000));
-    // ADD THIS LINE - Initialize hand detection
-    
+  // ADD THIS LINE - Initialize hand detection
+
   // Create a simple overlay for debug and game state information.
   infoDiv = document.createElement('div');
   infoDiv.id = 'gameInfo';
