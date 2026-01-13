@@ -72,9 +72,7 @@ function spawnAnomaly(type, position) {
     case 'WEEPING_ANGEL':
       createWeepingAngel(anomaly);
       break;
-    case 'GRASS_ADDED':
-      createGrassAdded(anomaly);
-      break;
+
   }
 
   currentAnomaly = anomaly;
@@ -165,7 +163,7 @@ function cleanupAnomaly(a) {
 // === Main update loop ===
 export function updateAnomalies() {
   const now = Date.now();
-  
+
   // Performance: Skip updates if called too frequently
   if (now - lastUpdateTime < UPDATE_INTERVAL) {
     return; // Skip this frame
@@ -226,9 +224,7 @@ export function updateAnomalies() {
         case 'WEEPING_ANGEL':
           updateWeepingAngel(currentAnomaly, progress);
           break;
-        case 'GRASS_ADDED':
-          updateGrassAdded(currentAnomaly, progress);
-          break;
+
       }
     }
   }
@@ -555,54 +551,6 @@ function updateWeepingAngel(a, progress) {
   }
 }
 
-// === GRASS_ADDED ===
-function createGrassAdded(a) {
-  // Load the grass_added GLB model
-  const loader = new GLTFLoader();
-  loader.load(
-    'models/grass_added.glb',
-    gltf => {
-      const model = gltf.scene;
-      model.scale.set(1, 1, 1);
-      
-      // Position the grass at the anomaly position
-      model.position.copy(a.position);
-      model.position.y = 0; // Place it on the ground
-      
-      scene.add(model);
-      a.meshes.push(model);
-      
-      // Optional: Add a subtle green light to highlight the grass
-      const light = new THREE.PointLight(0x00ff00, 0.5, 8);
-      light.position.copy(a.position);
-      light.position.y = 0.5;
-      scene.add(light);
-      a.lights.push(light);
-      
-      console.log('Grass added anomaly spawned at:', a.position);
-    },
-    undefined,
-    error => {
-      console.error('Error loading grass_added.glb:', error);
-    }
-  );
-}
 
-function updateGrassAdded(a, progress) {
-  if (!a.meshes.length) return;
-  
-  const grass = a.meshes[0];
-  const light = a.lights[0];
-  
-  // Gentle swaying animation
-  if (grass) {
-    grass.rotation.y = Math.sin(progress * 5) * 0.1;
-  }
-  
-  // Subtle light pulsing
-  if (light) {
-    light.intensity = 0.5 + Math.sin(progress * 8) * 0.2;
-  }
-}
 
 
