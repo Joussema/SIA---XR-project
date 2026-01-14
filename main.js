@@ -14,6 +14,7 @@ import {
   getRoomInstance,
 } from './environment/dynamicWorld.js';
 import { updateAnomalies, spawnAnomalyManual, clearAnomaly } from './anomalies/anomalyManager.js';
+import { initPuzzle, updatePuzzle, cleanupPuzzle } from './Sroom/doorPuzzle.js';
 
 
 // Create a game manager instance. The GameManager controls logic for
@@ -105,6 +106,7 @@ function animate() {
     gameManager.registerDecision(decision);
     // Clear any existing anomaly from the previous step.
     clearAnomaly();
+    cleanupPuzzle(); // Ensure puzzle is reset for the new step
     // Determine which buffer becomes the new centre based on the player's choice.
     const chosenBuffer = getBufferInstance(decision);
     // Retrieve the blueprint for the new step.
@@ -178,6 +180,27 @@ function animate() {
     gameManager.lastStepChecked = state.currentStep;
   }
   // --- NEW SOUND LOGIC END ---
+
+  // --- SROOM PUZZLE LOGIC START ---
+  if (bp.forwardRoomType === 'sroom') {
+    const forwardRoom = getRoomInstance('forward');
+    if (forwardRoom && forwardRoom.root) {
+      // Init puzzle if not already active (logic inside initPuzzle handles duality)
+      initPuzzle(scene, forwardRoom.root);
+    }
+  } else {
+    // If we are NOT in sroom (or sroom is not forward/current context), cleanup
+    cleanupPuzzle();
+  }
+
+  // Update raycaster for center of screen (crosshair)
+  raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+
+  // For 'click', we can add a flag `wasClicked` reset at end of frame?
+  updatePuzzle(raycaster, window.wasClicked);
+  window.wasClicked = false; // Reset click flag
+
+  // --- SROOM PUZZLE LOGIC END ---
 
   // Update any active anomalies (animation and cleanup of lifetime).
   updateAnomalies();
@@ -258,8 +281,8 @@ async function start() {
       targetMesh = null;
     }
   };
-  window.addEventListener('click', tryHit);
-  window.addEventListener('pointerdown', tryHit);
+  window.addEventListener('click', () => { tryHit(); window.wasClicked = true; });
+  window.addEventListener('pointerdown', () => { tryHit(); window.wasClicked = true; });
 
   // Optional: press R to respawn target for repeated testing
   window.addEventListener('keydown', (e) => {
