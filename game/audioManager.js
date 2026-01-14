@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 let globalListener = null;
+let mainThemeElement = null;
 
 export function setupAudio(camera) {
     // Create an AudioListener and add it to the camera
@@ -18,6 +19,8 @@ export function setupAudio(camera) {
     // Avoid preloading large music tracks; only load metadata until user interaction
     audio.preload = 'none';
     audio.volume = 0.5;
+
+    mainThemeElement = audio;
 
     // Connect the audio element to the Three.js audio source
     sound.setMediaElementSource(audio);
@@ -50,6 +53,14 @@ export function setupAudio(camera) {
     document.addEventListener('keydown', resumeAudio);
 
     return sound;
+}
+
+export function stopMainTheme() {
+    if (mainThemeElement) {
+        mainThemeElement.pause();
+        mainThemeElement.currentTime = 0;
+        console.log("Main theme stopped.");
+    }
 }
 
 export function playSound(soundName) {
@@ -91,7 +102,7 @@ export async function prefetchModel(modelPath) {
     }, 100); // Defer to next event loop
 }
 
-export function playPositionalSound(soundName, parentObject, refDistance = 2, maxDistance = 15) {
+export function playPositionalSound(soundName, parentObject, refDistance = 2, maxDistance = 15, volume = 1.0, playbackRate = 1.0) {
     if (!globalListener) return;
     const sound = new THREE.PositionalAudio(globalListener);
     const audioLoader = new THREE.AudioLoader();
@@ -99,7 +110,8 @@ export function playPositionalSound(soundName, parentObject, refDistance = 2, ma
         sound.setBuffer(buffer);
         sound.setRefDistance(refDistance);
         sound.setMaxDistance(maxDistance);
-        sound.setVolume(1.0);
+        sound.setVolume(volume);
+        sound.setPlaybackRate(playbackRate);
         parentObject.add(sound);
         sound.play();
         // Optional: remove sound object after playback if not looping

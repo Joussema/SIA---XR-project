@@ -19,10 +19,11 @@ export function initScene() {
     0.1,
     1000
   );
-  camera.position.set(0, 0, 1);
+  // User requested "spawn at 2 tiles higher" -> Y=2
+  camera.position.set(0, -0.7, 1);
 
   // Renderer with MAXIMUM performance optimizations
-  renderer = new THREE.WebGLRenderer({ 
+  renderer = new THREE.WebGLRenderer({
     antialias: false, // Disable antialiasing for performance
     powerPreference: 'high-performance',
     stencil: false,
@@ -32,13 +33,13 @@ export function initScene() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(1); // Force 1x pixel ratio for maximum FPS
   renderer.xr.enabled = true;
-  
+
   // Disable ALL expensive features
   renderer.shadowMap.enabled = false;
   renderer.shadowMap.autoUpdate = false;
   renderer.sortObjects = false;
   renderer.autoClear = true;
-  
+
   document.body.appendChild(renderer.domElement);
   document.body.appendChild(VRButton.createButton(renderer));
 
@@ -49,7 +50,7 @@ export function initScene() {
   // Very dim ambient light to prevent absolute pitch blackness
   const ambientLight = new THREE.AmbientLight(0x111111);
   scene.add(ambientLight);
-  
+
   console.log('🚀 Scene initialized - MAXIMUM PERFORMANCE MODE');
 }
 
@@ -72,7 +73,7 @@ export async function initializeHandDetection() {
         handMovement = isHandOpen ? xrMoveSpeed : 0;
         console.log('Hand control:', isHandOpen ? 'OPEN → FORWARD' : 'CLOSED → STOP');
       });
-      
+
       console.log('Hand detection initialized - Ready for movement control');
       isHandDetectionInitialized = true;
       return true;
@@ -145,12 +146,41 @@ export function setupControls() {
   }
 }
 
+// Freeze state
+let isFrozen = false;
+let forcedTarget = null;
+
+export function freezePlayerAt(targetPos) {
+  isFrozen = true;
+  forcedTarget = targetPos ? targetPos.clone() : null;
+  console.log("Player frozen. Target:", forcedTarget);
+}
+
+export function unfreezePlayer() {
+  isFrozen = false;
+  forcedTarget = null;
+  console.log("Player unfrozen.");
+}
+
 // Update movement every frame
 export function updateMovement() {
   if (!renderer || !camera) return;
 
   const moveTarget = renderer.xr.isPresenting && dolly ? dolly : camera;
   const currentPosition = moveTarget.position.clone();
+
+  // --- FREEZE / FORCED MOVEMENT ---
+  if (isFrozen) {
+    if (forcedTarget) {
+      // Smoothly move towards target (Simple Lerp)
+      // We modify the position directly, bypassing collision to ensure we reach the target
+      // Preserving Y if needed, but user asked to move 'in place of door'. 
+      // Assuming targetPos includes desired Y.
+      moveTarget.position.lerp(forcedTarget, 0.005); // 0.005 = Very slow, gentle movement
+    }
+    // Return early to prevent WASD/Hand movement
+    return;
+  }
 
   // Get camera direction for movement
   const cameraWorldDirection = new THREE.Vector3();
@@ -173,7 +203,7 @@ export function updateMovement() {
     if (handMovement !== 0) {
       const newPosition = currentPosition.clone();
       newPosition.addScaledVector(forward, handMovement);
-      
+
       // Utilise la NOUVELLE méthode
       if (!collisionSystem.checkWallCollision(newPosition, currentPosition)) {
         dolly.position.copy(newPosition);
@@ -185,7 +215,7 @@ export function updateMovement() {
   if (!renderer.xr.isPresenting) {
     let wantsToMove = false;
     let direction = new THREE.Vector3(0, 0, 0);
-    
+
     if (keys['z'] || keys['arrowup']) {
       direction.add(forward);
       wantsToMove = true;
@@ -202,18 +232,18 @@ export function updateMovement() {
       direction.sub(right);
       wantsToMove = true;
     }
-    
+
     if (wantsToMove) {
       direction.normalize();
       const newPosition = currentPosition.clone();
       newPosition.addScaledVector(direction, moveSpeed);
-      
+
       // Utilise la NOUVELLE méthode
       if (!collisionSystem.checkWallCollision(newPosition, currentPosition)) {
         moveTarget.position.copy(newPosition);
       }
     }
-    
+
     // Up/Down movement
     if (keys[' ']) moveTarget.position.y += moveSpeed;
     if (keys['shift']) moveTarget.position.y -= moveSpeed;
@@ -244,7 +274,7 @@ export async function onButtonClicked() {
 
     // WAIT A BIT FOR VR TO SETTLE, THEN START HAND DETECTION
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     // NOW START HAND DETECTION
     console.log('Starting hand detection for VR mode...');
     await initializeHandDetection();
@@ -253,7 +283,7 @@ export async function onButtonClicked() {
       console.log('VR session ended');
       stopHandDetection();
     });
-    
+
   } catch (error) {
     console.error('Error starting VR session:', error);
     alert('Failed to start VR session: ' + error.message);
@@ -269,7 +299,8 @@ export function setupVR() {
 
   // Dolly (camera rig for head tracking only)
   dolly = new THREE.Group();
-  dolly.position.set(0, -1.2, 0);
+  // VR: previously -1.2, added 2.0 -> 0.8
+  dolly.position.set(0, 0.8, 0);
   dolly.add(camera);
   scene.add(dolly);
 

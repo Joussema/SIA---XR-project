@@ -58,7 +58,7 @@ export class GameManager {
     const backwardRoomType_placeholder = 'bufferzone'; // Temporary, will be set correctly at return.
 
     // Randomly decide if an anomaly should appear (e.g., 50% chance).
-    const hasAnomaly = Math.random() < 0.6;
+    const hasAnomaly = Math.random() < 0;
     let anomalyType = null;
     let anomalyLocation = null;
 

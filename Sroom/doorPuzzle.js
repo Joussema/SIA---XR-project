@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { freezePlayerAt, camera, renderer, dolly, scene } from '../core/init.js';
+import { playPositionalSound, stopMainTheme } from '../game/audioManager.js';
+import { triggerFlashlightFlicker } from '../game/flashlight.js';
+import { SimpleModelLoader } from '../environment/modelloader.js';
 
 let spheres = [];
 let puzzleActive = false;
@@ -80,10 +84,11 @@ export async function initPuzzle(scene, roomRoot) {
     currentAnswer = puzzle.solution.toLowerCase();
 
     // Sphere data - Ordered: Blue, Red, White
+    // Customized positions (X, Y, Z) for each sphere
     const sphereData = [
-        { color: 0x0000ff, name: 'blue', x: -1.5, statement: puzzle.blue },
-        { color: 0xff0000, name: 'red', x: 0, statement: puzzle.red },
-        { color: 0xffffff, name: 'white', x: 1.5, statement: puzzle.white }
+        { color: 0x0000ff, name: 'blue', pos: { x: -6, y: 0, z: -2 }, statement: puzzle.blue },
+        { color: 0xff0000, name: 'red', pos: { x: -6, y: 0, z: -4 }, statement: puzzle.red },
+        { color: 0xffffff, name: 'white', pos: { x: -6, y: 0, z: -6 }, statement: puzzle.white }
     ];
 
     const puzzleGroup = new THREE.Group();
@@ -96,7 +101,7 @@ export async function initPuzzle(scene, roomRoot) {
             emissiveIntensity: 0.5
         });
         const sphere = new THREE.Mesh(geometry, material);
-        sphere.position.set(data.x, 1.5, 4);
+        sphere.position.set(data.pos.x, data.pos.y, data.pos.z);
         sphere.userData = {
             name: data.name,
             isPuzzleSphere: true,
@@ -142,6 +147,7 @@ export async function initPuzzle(scene, roomRoot) {
         puzzleContainer.userData.doors = doors;
         puzzleContainer.userData.skulls = skulls;
         puzzleContainer.userData.stands = stands;
+        puzzleContainer.userData.roomRoot = roomRoot; // Save for audio source
 
         console.log("Puzzle Connections (Final):",
             "\nBlue (Left) Group:",
@@ -180,8 +186,98 @@ export async function initPuzzle(scene, roomRoot) {
     }
 }
 
+// Fiend Jumpscare State
+let fiend = null;
+let fiendActive = false;
+let fiendSoundPlayed = false;
+const fiendSpeed = 12.0; // High speed
+
+// Jumpscare Configuration (Global for tuning)
+window.JUMPSCARE_CONFIG = {
+    fiendHeightOffset: 0, // Lower the fiend
+    delayBells: 2000,        // Time before bells start (from freeze)
+    delayFootsteps: 5000,    // Time after bells to start footsteps
+    delayGrowl: 2000,        // Time after footsteps to start growl
+    delayLaunch: 10000,      // Time after growl to launch fiend
+
+    // Audio Tuning
+    footstepsRate: 0.8,      // 20% slower (0.8)
+    growlVolume: 2.0         // Louder (2.0)
+};
+
 export function updatePuzzle(raycaster, interactPressed) {
     if (!puzzleActive || !puzzleContainer) return;
+
+    // --- FIEND JUMPSCARE LOGIC ---
+    if (fiendActive && fiend) {
+        // Target player head
+        const targetObj = (renderer.xr.isPresenting && dolly) ? dolly : camera;
+        const targetPos = targetObj.position.clone();
+
+        // Flatten target to Fiend's height immediately
+        // This stops it from looking up/down or moving up/down
+        const flatTarget = new THREE.Vector3(targetPos.x, fiend.position.y, targetPos.z);
+
+        // Face player (Horizontal only)
+        fiend.lookAt(flatTarget);
+
+        // Calculate horizontal distance
+        const distance = fiend.position.distanceTo(flatTarget);
+
+        // 1. TRIGGER SOUND at 5 tiles
+        if (distance <= 15.0 && !fiendSoundPlayed) {
+            console.log("Fiend proximity sound trigger!");
+            fiendSoundPlayed = true;
+            // Use playPositionalSound attached to camera for "global" loud sound
+            playPositionalSound('Jumpscare Effect.mp3', camera, 1, 100, 5.0); // Volume 5.0
+        }
+
+        // 2. TRIGGER GAME OVER SCREEN at 1.5 tiles (Contact)
+        if (distance <= 1.5) {
+            console.log("Fiend grabbed player! GAME OVER.");
+
+            // STOP MAIN MUSIC
+            stopMainTheme();
+
+            // Create/Show Game Over Screen
+            let gameOverScreen = document.getElementById('game-over-screen');
+            if (!gameOverScreen) {
+                gameOverScreen = document.createElement('div');
+                gameOverScreen.id = 'game-over-screen';
+                gameOverScreen.style.position = 'fixed';
+                gameOverScreen.style.top = '0';
+                gameOverScreen.style.left = '0';
+                gameOverScreen.style.width = '100vw';
+                gameOverScreen.style.height = '100vh';
+                gameOverScreen.style.backgroundColor = 'black';
+                gameOverScreen.style.display = 'flex';
+                gameOverScreen.style.justifyContent = 'center';
+                gameOverScreen.style.alignItems = 'center';
+                gameOverScreen.style.zIndex = '9999';
+
+                const text = document.createElement('h1');
+                text.textContent = 'YOU LOST';
+                text.style.color = 'red';
+                text.style.fontSize = '5rem';
+                text.style.fontFamily = 'serif';
+                text.style.textShadow = '0 0 10px darkred';
+
+                gameOverScreen.appendChild(text);
+                document.body.appendChild(gameOverScreen);
+            } else {
+                gameOverScreen.style.display = 'flex';
+            }
+
+            // Disable Fiend Loop
+            fiendActive = false;
+        }
+
+        // Move towards player if far enough
+        if (distance > 1.5) {
+            const direction = new THREE.Vector3().subVectors(flatTarget, fiend.position).normalize();
+            fiend.position.add(direction.multiplyScalar(fiendSpeed * 0.016)); // Approx 60fps delta
+        }
+    }
 
     const intersects = raycaster.intersectObjects(spheres);
 
@@ -201,6 +297,81 @@ export function updatePuzzle(raycaster, interactPressed) {
             } else {
                 statusElement.textContent = `Wrong! ${colorName} is not the answer.`;
                 statusElement.style.color = '#ff0000';
+
+                // --- WRONG ANSWER EVENT ---
+                const doors = puzzleContainer.userData.doors;
+                if (doors && doors[colorName]) {
+                    const targetDoor = doors[colorName];
+                    const targetPos = new THREE.Vector3();
+                    targetDoor.getWorldPosition(targetPos);
+
+                    // Adjust Y for player mode
+                    if (renderer.xr.isPresenting && dolly) {
+                        targetPos.y = dolly.position.y;
+                    } else {
+                        targetPos.y = camera.position.y;
+                    }
+
+                    console.log(`Wrong choice! Freezing player and moving to ${colorName} door at`, targetPos);
+                    freezePlayerAt(targetPos);
+
+                    // --- JUMPSCARE SEQUENCE ---
+                    const cfg = window.JUMPSCARE_CONFIG;
+                    const entrance = puzzleContainer.userData.roomRoot;
+
+                    if (entrance) {
+                        // 1. Bells of Doom
+                        setTimeout(() => {
+                            console.log("Sequence: Bells of Doom");
+                            playPositionalSound('bells of doom.mp3', entrance, 5, 50);
+
+                            // Flashlight Flicker: 3s after bells, for 4s
+                            setTimeout(() => {
+                                console.log("Sequence: Flashlight Flicker");
+                                triggerFlashlightFlicker(9000);
+                            }, 3000);
+
+                            // 2. Heavy Footsteps (chained)
+                            setTimeout(() => {
+                                console.log("Sequence: Heavy Footsteps");
+                                // 20% slower = 0.8 rate
+                                playPositionalSound('Heavy foot.mp3', entrance, 5, 50, 1.0, cfg.footstepsRate);
+
+                                // 3. Growl (chained)
+                                setTimeout(() => {
+                                    console.log("Sequence: Growl");
+                                    // Louder = 2.0 volume
+                                    playPositionalSound('growl.mp3', entrance, 5, 50, cfg.growlVolume);
+
+                                    // 4. Launch Fiend (chained)
+                                    setTimeout(async () => {
+                                        console.log("Sequence: Launching Fiend!");
+                                        const loader = new SimpleModelLoader(scene);
+                                        try {
+                                            const model = await loader.load('models/Forest_Fiend.glb', THREE);
+                                            fiend = model;
+
+                                            // Spawn Position
+                                            const spawnPos = new THREE.Vector3();
+                                            entrance.getWorldPosition(spawnPos);
+                                            spawnPos.y += cfg.fiendHeightOffset; // Apply height offset
+
+                                            fiend.position.copy(spawnPos);
+                                            scene.add(fiend);
+
+                                            fiendActive = true;
+                                        } catch (e) {
+                                            console.error("Failed to spawn fiend:", e);
+                                        }
+                                    }, cfg.delayLaunch);
+
+                                }, cfg.delayGrowl);
+
+                            }, cfg.delayFootsteps);
+
+                        }, cfg.delayBells);
+                    }
+                }
             }
 
             // Visual feedback
@@ -208,6 +379,10 @@ export function updatePuzzle(raycaster, interactPressed) {
             setTimeout(() => {
                 if (hit.material) hit.material.emissiveIntensity = 0.5;
             }, 200);
+
+            // Play Door Sound
+            const audio = new Audio('sounds/door.mp3');
+            audio.play().catch(e => console.error("Error playing sound:", e));
 
             // Removal Logic: ONLY REMOVE DOOR
             const doors = puzzleContainer.userData.doors;
