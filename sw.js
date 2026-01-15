@@ -48,6 +48,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip non-http/https requests (e.g. chrome-extension://)
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
   // For models: network first, cache as fallback
   if (url.pathname.startsWith('/models/')) {
     event.respondWith(
@@ -59,7 +64,10 @@ self.addEventListener('fetch', (event) => {
   // For sounds: cache first, network as fallback
   if (url.pathname.startsWith('/sounds/')) {
     event.respondWith(
-      caches.match(request).then(cached => cached || fetch(request))
+      caches.match(request).then(cached => cached || fetch(request).catch(err => {
+        console.warn('Fetch failed for sound:', request.url);
+        throw err;
+      }))
     );
     return;
   }
@@ -74,6 +82,9 @@ self.addEventListener('fetch', (event) => {
 
   // For everything else: cache first
   event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request))
+    caches.match(request).then((cached) => cached || fetch(request).catch(err => {
+      console.warn('Fetch failed for asset:', request.url);
+      throw err;
+    }))
   );
 });

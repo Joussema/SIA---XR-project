@@ -14,7 +14,7 @@ export class GameManager {
    * Construct a new GameManager.
    * @param {number} targetExit The number of consecutive correct exits required to win.
    */
-  constructor(targetExit = 8) {
+  constructor(targetExit = 10) {
     this.targetExit = targetExit;
     this.currentStep = 0;
     this.exitCount = 0;
@@ -22,6 +22,7 @@ export class GameManager {
     this.lastCorrect = null;
     // Map of step index to blueprint. Blueprints are generated on demand.
     this.blueprints = new Map();
+    this.eventQueue = [];
   }
 
   /**
@@ -34,107 +35,138 @@ export class GameManager {
     this.lastDecision = null;
     this.lastCorrect = null;
     this.blueprints.clear();
+    this.generateQueue();
   }
 
   /**
-   * Generate a new StepBlueprint. A blueprint describes which rooms
-   * appear on the forward and backward branches, whether there is an
-   * anomaly, and which branch is the correct choice. Probabilities are
-   * tuned to create variety but can be adjusted.
+   * Generates a shuffled queue of 7 room types for the next cycle (streaks 1-7).
+   * - 1x Sroom (Mandatory)
+   * - Max 1x Runroom (50% chance)
+   * - Max 1x each for other anomalies (Random chance)
+   * - Remainder filled with Corridors
+   */
+  generateQueue() {
+    const queue = ['sroom', 'runroom']; // Always include sroom AND runroom
+
+    // Other Anomalies
+    const potentialAnomalies = ['scaryladyroom', 'scarygang', 'fiendroom', 'weepingangelroom'];
+    // Shuffle potential anomalies to pick random ones if we limit count,
+    // or just iterate and decide chance for each.
+    // Increased chance to 70% per anomaly to reduce repetitiveness
+    potentialAnomalies.forEach(type => {
+      if (Math.random() < 0.7) {
+        queue.push(type);
+      }
+    });
+
+    // Fill the rest of the 9 slots with 'corridor'
+    while (queue.length < 9) {
+      queue.push('corridor');
+    }
+
+    // If we have too many, truncate to 9
+    while (queue.length > 9) {
+      queue.pop();
+    }
+
+    // Shuffle
+    for (let i = queue.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [queue[i], queue[j]] = [queue[j], queue[i]];
+    }
+
+    this.eventQueue = queue;
+    console.log("Generated Event Queue:", this.eventQueue);
+  }
+
+  /**
+   * Generate a new StepBlueprint.
    *
    * @param {number} stepIndex The index of the step for which to generate a blueprint.
    * @returns {object} A blueprint object.
    */
   generateBlueprint(stepIndex) {
     // FORCE INITIAL STATE: Step 0 is always Corridor (Forward) and Deadend (Backward)
-    if (stepIndex === 0) {
-      console.log("Generating Initial Blueprint (Step 0): Force Safe Start");
-      // Store and return fixed blueprint
-      const bp = {
-        step: 0,
-        forwardRoomType: 'corridor',
-        backwardRoomType: 'deadend',
-        hasAnomaly: false,
-        anomalyType: null,
-        anomalyLocation: null,
-        correctDecision: 'forward' // Safe to go forward
-      };
-      this.blueprints.set(0, bp);
-      return bp;
+    // Also happens if we just reset (streak 0)
+    if (stepIndex === 0 || this.exitCount === 0) {
+      // Note: stepIndex keeps going up, so check exitCount for logical game stage?
+      // Actually, stepIndex is monotonic. using exitCount is better for "Stage" logic.
+      // But stepIndex is used for blueprint caching.
+      // Let's rely on exitCount for logic, but we need to ensure unique steps get blueprinted.
     }
+
+    // However, the prompt implies "reset buffer" on wrong decision.
+    // My registerDecision resets exitCount to 0 on wrong.
 
     // Check for Win Condition (Streak Reached)
     if (this.exitCount >= this.targetExit) {
       console.log(`Generating Blueprint: Target Reached (${this.exitCount}) - Spawning Ending Room`);
-      const bp = {
-        step: stepIndex,
+      return {
+        index: stepIndex, // Fix: return index
         forwardRoomType: 'ending',
         backwardRoomType: 'deadend',
         hasAnomaly: false,
         anomalyType: null,
         anomalyLocation: null,
-        correctDecision: 'forward' // Go towards the light
+        expectedDecision: 'forward',
+        correctDecision: 'forward'
       };
-      this.blueprints.set(stepIndex, bp);
-      return bp;
     }
 
-    // Available room types. More types can be added here as long as
-    // corresponding GLB definitions exist in environment/rooms.js.
-    const roomTypes = ['corridor', 'sroom', 'runroom'];
+    // Streak 0 -> Safe Start
+    if (this.exitCount === 0) {
+      return {
+        index: stepIndex,
+        forwardRoomType: 'corridor',
+        backwardRoomType: 'deadend',
+        hasAnomaly: false,
+        anomalyType: null,
+        anomalyLocation: null,
+        expectedDecision: 'forward',
+        correctDecision: 'forward'
+      };
+    }
 
-    // Randomly choose room type for forward and backward branches.
-    let forwardRoomType = roomTypes[Math.floor(Math.random() * roomTypes.length)];
-    // If forward room is 'sroom' or 'runroom', force backward path to be a deadend.
-    // Otherwise, use 'bufferzone' for smooth backward transition.
-    // Logic moved to end of function to respect anomaly overrides.
-    const backwardRoomType_placeholder = 'bufferzone'; // Temporary, will be set correctly at return.
+    // Streak 1-7 -> Use Queue
+    // Queue index = (exitCount - 1). 
+    // E.g. Streak 1 (just passed safe step) -> Queue[0]
+    // Streak 7 -> Queue[6]
+    const queueIndex = this.exitCount - 1;
+    let forwardRoomType = 'corridor';
+    if (this.eventQueue && queueIndex < this.eventQueue.length) {
+      forwardRoomType = this.eventQueue[queueIndex];
+    } else {
+      // Fallback or if logic drifts
+      forwardRoomType = 'corridor';
+    }
 
-    // Randomly decide if an anomaly should appear (e.g., 50% chance).
-    const hasAnomaly = Math.random() < 0;
+    let hasAnomaly = false;
     let anomalyType = null;
     let anomalyLocation = null;
 
-    if (hasAnomaly) {
-      // Distribute anomaly chances:
-      // ~17% each for different anomaly types
-      const rand = Math.random();
-
-
-
-      if (rand < 0.20) {
-        // The room itself is the anomaly
-        forwardRoomType = 'scaryladyroom';
-        anomalyType = 'ROOM';
-        anomalyLocation = 'forward';
-      } else if (rand < 0.40) {
-        // The room itself is the anomaly
-        forwardRoomType = 'scarygang';
-        anomalyType = 'ROOM';
-        anomalyLocation = 'forward';
-      } else if (rand < 0.60) {
-        // The room itself is the anomaly
-        forwardRoomType = 'fiendroom';
-        anomalyType = 'ROOM';
-        anomalyLocation = 'forward';
-      } else if (rand < 0.70) {
-        // The room itself is the anomaly
-        forwardRoomType = 'grassroom';
-        anomalyType = 'ROOM';
-        anomalyLocation = 'forward';
-      } else {
-        // Weeping Angel Anomaly
-        forwardRoomType = 'weepingangelroom';
-        anomalyType = 'WEEPING_ANGEL';
-        anomalyLocation = 'forward';
-      }
+    if (forwardRoomType !== 'corridor') {
+      hasAnomaly = true;
+      anomalyType = forwardRoomType === 'weepingangelroom' ? 'WEEPING_ANGEL' : 'ROOM';
+      anomalyLocation = 'forward';
     }
 
-    // If there is an anomaly, the correct decision is to turn back.
-    // If there is no anomaly, the correct decision is to keep going forward.
-    const expectedDecision = hasAnomaly ? 'backward' : 'forward';
+    // Logic: 
+    // - Sroom & Runroom: Special events, proceed FORWARD to engage
+    // - Anomalies: DANGER, go BACKWARD
+    // - Corridor: Safe, go FORWARD
+    let expectedDecision = 'forward';
 
-    // Finalize backward room type based on the FINAL forward room type (after anomalies)
+    if (forwardRoomType === 'sroom' || forwardRoomType === 'runroom') {
+      expectedDecision = 'forward';
+    } else if (hasAnomaly) {
+      expectedDecision = 'backward';
+    } else {
+      expectedDecision = 'forward';
+    }
+
+    // Backward Room Logic
+    // Sroom & Runroom -> Deadend
+    // Others -> Bufferzone (Standard)
     const finalBackwardRoomType = (forwardRoomType === 'sroom' || forwardRoomType === 'runroom') ? 'deadend' : 'bufferzone';
 
     return {
@@ -182,6 +214,8 @@ export class GameManager {
     } else {
       // Wrong answers reset the consecutive streak.
       this.exitCount = 0;
+      // RE-GENERATE QUEUE on failure to ensure variety next time
+      this.generateQueue();
     }
     this.currentStep += 1;
     return correct;

@@ -88,7 +88,7 @@ async function loadLazyTemplates(loader, lazyIds) {
  *   the new centre, or null to discard everything.
  */
 export function clearWorld(fromBuffer) {
-  const toRemove = [forwardRoom, forwardBuffer, backwardRoom, backwardBuffer];
+  const toRemove = [centerBuffer, forwardRoom, forwardBuffer, backwardRoom, backwardBuffer];
   toRemove.forEach((inst) => {
     if (inst && inst.root && (!fromBuffer || inst.root !== fromBuffer.root)) {
       scene.remove(inst.root);
