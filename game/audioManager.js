@@ -102,21 +102,32 @@ export async function prefetchModel(modelPath) {
     }, 100); // Defer to next event loop
 }
 
-export function playPositionalSound(soundName, parentObject, refDistance = 2, maxDistance = 15, volume = 1.0, playbackRate = 1.0) {
-    if (!globalListener) return;
+export function playPositionalSound(soundName, parentObject, refDistance = 2, maxDistance = 15, volume = 1.0, playbackRate = 1.0, loop = false) {
+    if (!globalListener) return null;
     const sound = new THREE.PositionalAudio(globalListener);
     const audioLoader = new THREE.AudioLoader();
     audioLoader.load(`sounds/${soundName}`, function (buffer) {
+        if (!sound.parent) { // Check if sound was stopped/removed before load finished
+            return;
+        }
         sound.setBuffer(buffer);
         sound.setRefDistance(refDistance);
         sound.setMaxDistance(maxDistance);
         sound.setVolume(volume);
         sound.setPlaybackRate(playbackRate);
-        parentObject.add(sound);
+        sound.setLoop(loop);
+
+        // If the object was already added (which it is below), play.
+        if (sound.isPlaying) sound.stop();
         sound.play();
-        // Optional: remove sound object after playback if not looping
-        sound.onEnded = () => {
-            parentObject.remove(sound);
-        };
+
+        if (!loop) {
+            sound.onEnded = () => {
+                if (sound.parent) sound.parent.remove(sound);
+            };
+        }
     });
+    // Add to parent immediately so we have a reference
+    parentObject.add(sound);
+    return sound;
 }

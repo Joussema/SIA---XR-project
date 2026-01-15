@@ -48,11 +48,11 @@ export class GameManager {
   generateBlueprint(stepIndex) {
     // Available room types. More types can be added here as long as
     // corresponding GLB definitions exist in environment/rooms.js.
-    const roomTypes = ['corridor', 'sroom'];
+    const roomTypes = ['corridor', 'sroom', 'runroom'];
 
     // Randomly choose room type for forward and backward branches.
     let forwardRoomType = roomTypes[Math.floor(Math.random() * roomTypes.length)];
-    // If forward room is 'sroom', force backward path to be a deadend to prevent confusion.
+    // If forward room is 'sroom' or 'runroom', force backward path to be a deadend.
     // Otherwise, use 'bufferzone' for smooth backward transition.
     // Logic moved to end of function to respect anomaly overrides.
     const backwardRoomType_placeholder = 'bufferzone'; // Temporary, will be set correctly at return.
@@ -67,7 +67,7 @@ export class GameManager {
       // ~17% each for different anomaly types
       const rand = Math.random();
 
-      
+
 
       if (rand < 0.20) {
         // The room itself is the anomaly
@@ -102,7 +102,7 @@ export class GameManager {
     const expectedDecision = hasAnomaly ? 'backward' : 'forward';
 
     // Finalize backward room type based on the FINAL forward room type (after anomalies)
-    const finalBackwardRoomType = (forwardRoomType === 'sroom') ? 'deadend' : 'bufferzone';
+    const finalBackwardRoomType = (forwardRoomType === 'sroom' || forwardRoomType === 'runroom') ? 'deadend' : 'bufferzone';
 
     return {
       index: stepIndex,

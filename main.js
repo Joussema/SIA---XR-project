@@ -15,6 +15,7 @@ import {
 } from './environment/dynamicWorld.js';
 import { updateAnomalies, spawnAnomalyManual, clearAnomaly } from './anomalies/anomalyManager.js';
 import { initPuzzle, updatePuzzle, cleanupPuzzle } from './Sroom/doorPuzzle.js';
+import { runRoomEvent } from './game/runRoomEvent.js';
 
 
 // Create a game manager instance. The GameManager controls logic for
@@ -208,6 +209,18 @@ function animate() {
   window.wasClicked = false; // Reset click flag
 
   // --- SROOM PUZZLE LOGIC END ---
+
+  // --- RUN ROOM EVENT LOGIC START ---
+  if (bp.forwardRoomType === 'runroom') {
+    const forwardRoom = getRoomInstance('forward');
+    if (forwardRoom && forwardRoom.root) {
+      runRoomEvent.init(forwardRoom.root);
+      runRoomEvent.update(playerPos);
+    }
+  } else {
+    runRoomEvent.cleanup();
+  }
+  // --- RUN ROOM EVENT LOGIC END ---
 
   // Update any active anomalies (animation and cleanup of lifetime).
   updateAnomalies();

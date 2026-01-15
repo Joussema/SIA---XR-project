@@ -164,6 +164,26 @@ export const rooms = [
     ],
   },
   {
+    id: 'runroom',
+    modelPath: 'models/corridor.glb',
+    defaultUp: [0, 1, 0],
+    preRotation: 0,
+    entrances: [
+      {
+        id: 'start',
+        // Same as corridor
+        position: [10, 2, 16],
+        forward: [0, 0, 1],
+      },
+      {
+        id: 'end',
+        // Same as corridor
+        position: [-10, 2, -16],
+        forward: [0, 0, -1],
+      },
+    ],
+  },
+  {
     id: 'deadend',
     modelPath: 'models/deadend.glb',
     defaultUp: [0, 1, 0],

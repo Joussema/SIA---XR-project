@@ -72,3 +72,30 @@ export function triggerFlashlightFlicker(duration = 4000) {
 
     }, 100); // Fast flicker every 100ms
 }
+// Continuous flicker state
+let infiniteFlickerInterval = null;
+
+export function startInfiniteFlicker() {
+    if (infiniteFlickerInterval) return; // Already flickering
+    if (!activeLights) return;
+
+    const { mainBeam, spillBeam } = activeLights;
+
+    infiniteFlickerInterval = setInterval(() => {
+        const isVisible = Math.random() > 0.5;
+        mainBeam.visible = isVisible;
+        spillBeam.visible = isVisible;
+    }, 100);
+}
+
+export function stopInfiniteFlicker() {
+    if (infiniteFlickerInterval) {
+        clearInterval(infiniteFlickerInterval);
+        infiniteFlickerInterval = null;
+    }
+    // Restore lights to ON
+    if (activeLights) {
+        activeLights.mainBeam.visible = true;
+        activeLights.spillBeam.visible = true;
+    }
+}
