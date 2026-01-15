@@ -220,7 +220,15 @@ export async function initPuzzle(scene, roomRoot) {
     const sphereData = [
         { color: 0x0000ff, name: 'blue', pos: { x: -6, y: 0, z: -2 }, statement: puzzle.blue },
         { color: 0xff0000, name: 'red', pos: { x: -6, y: 0, z: -4 }, statement: puzzle.red },
-        { color: 0xffffff, name: 'white', pos: { x: -6, y: 0, z: -6 }, statement: puzzle.white }
+        { color: 0xffffff, name: 'white', pos: { x: -6, y: 0, z: -6 }, statement: puzzle.white },
+        // Black sphere - Hint
+        {
+            color: 0x000000,
+            name: 'black',
+            pos: { x: -6, y: 1.5, z: -4 }, // Above the red sphere
+            statement: "at least one of the stament is true , at least one of them is false",
+            isInteractive: false
+        }
     ];
 
     const puzzleGroup = new THREE.Group();
@@ -237,7 +245,8 @@ export async function initPuzzle(scene, roomRoot) {
         sphere.userData = {
             name: data.name,
             isPuzzleSphere: true,
-            statement: data.statement
+            statement: data.statement,
+            isInteractive: data.isInteractive !== undefined ? data.isInteractive : true
         };
         puzzleGroup.add(sphere);
         spheres.push(sphere);
@@ -410,6 +419,11 @@ export function updatePuzzle(raycaster, interactPressed) {
         }
 
         if (interactPressed) {
+            // Check interactivity
+            if (hit.userData.isInteractive === false) {
+                return; // Do nothing for non-interactive spheres
+            }
+
             // --- DESPAWN ALL SPHERES ---
             spheres.forEach(s => {
                 if (s.parent) s.parent.remove(s);
