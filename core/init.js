@@ -19,8 +19,8 @@ export function initScene() {
     0.1,
     1000
   );
-  // User requested "spawn at 2 tiles higher" -> Y=2
-  camera.position.set(0, -0.7, 1);
+  // Desktop mode position
+  camera.position.set(0, 1, 1);
 
   // Renderer with MAXIMUM performance optimizations
   renderer = new THREE.WebGLRenderer({
@@ -57,24 +57,54 @@ export function initScene() {
 //////////////////////////////////////
 
 const keys = {};
-let moveSpeed = 0.05;
-let xrMoveSpeed = 0.1; // Faster movement speed for XR mode
+let moveSpeed = 0.05; // WASD movement speed
+let xrMoveSpeed = 0.05; // Faster movement speed for XR mode
 let handMovement = 0;
 let isHandDetectionInitialized = false;
+let isIndexPointing = false;
+let onIndexSelectCallback = null;
+let lastIndexState = false; // Track previous state for edge detection
+
+// XR Cursor for selection
+let xrCursor = null;
+let xrRaycaster = null;
+const XR_CURSOR_DISTANCE = 3; // Distance of cursor from camera
 
 // Initialize hand detection - ONLY IN VR MODE
 export async function initializeHandDetection() {
   try {
     const success = await handDetector.initialize();
     if (success) {
-      handDetector.setHandStateCallback((isHandOpen) => {
+      handDetector.setHandStateCallback((handState) => {
+        const { isHandOpen, isIndexOnly } = handState;
+        
         // OPEN HAND = MOVE FORWARD
         // CLOSED/NO HAND = STOP
         handMovement = isHandOpen ? xrMoveSpeed : 0;
-        console.log('Hand control:', isHandOpen ? 'OPEN → FORWARD' : 'CLOSED → STOP');
+        
+        // INDEX ONLY = SELECT (like a click)
+        // Detect rising edge (transition from not pointing to pointing)
+        if (isIndexOnly && !lastIndexState) {
+          console.log('Hand control: INDEX → SELECT (click)');
+          isIndexPointing = true;
+          // Trigger click for puzzle and other systems
+          window.wasClicked = true;
+          if (onIndexSelectCallback) {
+            onIndexSelectCallback();
+          }
+        } else {
+          isIndexPointing = isIndexOnly;
+        }
+        lastIndexState = isIndexOnly;
+        
+        if (isHandOpen) {
+          console.log('Hand control: OPEN → FORWARD');
+        } else if (!isIndexOnly) {
+          console.log('Hand control: CLOSED → STOP');
+        }
       });
 
-      console.log('Hand detection initialized - Ready for movement control');
+      console.log('Hand detection initialized - Ready for movement and selection control');
       isHandDetectionInitialized = true;
       return true;
     }
@@ -91,6 +121,8 @@ export function stopHandDetection() {
     handDetector.stopDetection();
     isHandDetectionInitialized = false;
     handMovement = 0;
+    isIndexPointing = false;
+    lastIndexState = false;
     console.log('Hand detection stopped');
   }
 }
@@ -299,13 +331,93 @@ export function setupVR() {
 
   // Dolly (camera rig for head tracking only)
   dolly = new THREE.Group();
-  // VR: previously -1.2, added 2.0 -> 0.8
-  dolly.position.set(0, 0.8, 0);
+  // VR: 
+  dolly.position.set(0, -1.3, 0);
   dolly.add(camera);
   scene.add(dolly);
 
+  // Create XR cursor (small ring that follows head direction)
+  createXRCursor();
+
+  // Create XR raycaster
+  xrRaycaster = new THREE.Raycaster();
+
   // NO CONTROLLERS - Movement is handled by hand detection only
   console.log('VR setup complete - Movement controlled by hand gestures');
+}
+
+// Create visual cursor for XR mode
+function createXRCursor() {
+  // Create a ring geometry for the cursor
+  const ringGeometry = new THREE.RingGeometry(0.015, 0.025, 32);
+  const ringMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.8,
+    depthTest: false
+  });
+  
+  xrCursor = new THREE.Mesh(ringGeometry, ringMaterial);
+  xrCursor.renderOrder = 9999; // Always render on top
+  xrCursor.visible = false; // Hidden until XR mode
+  
+  // Add a small dot in the center
+  const dotGeometry = new THREE.CircleGeometry(0.005, 16);
+  const dotMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.9,
+    depthTest: false
+  });
+  const dot = new THREE.Mesh(dotGeometry, dotMaterial);
+  dot.position.z = 0.001; // Slightly in front of ring
+  xrCursor.add(dot);
+  
+  scene.add(xrCursor);
+  console.log('XR cursor created');
+}
+
+// Update XR cursor position (call this in render loop)
+export function updateXRCursor() {
+  if (!renderer || !renderer.xr.isPresenting || !xrCursor || !camera) {
+    if (xrCursor) xrCursor.visible = false;
+    return;
+  }
+  
+  // Show cursor in XR mode
+  xrCursor.visible = true;
+  
+  // Get camera world position and direction
+  const camPos = new THREE.Vector3();
+  const camDir = new THREE.Vector3();
+  camera.getWorldPosition(camPos);
+  camera.getWorldDirection(camDir);
+  
+  // Position cursor in front of camera
+  const cursorPos = camPos.clone().add(camDir.multiplyScalar(XR_CURSOR_DISTANCE));
+  xrCursor.position.copy(cursorPos);
+  
+  // Make cursor face the camera
+  xrCursor.lookAt(camPos);
+  
+  // Update XR raycaster to follow head direction
+  if (xrRaycaster) {
+    camera.getWorldPosition(camPos);
+    camera.getWorldDirection(camDir);
+    xrRaycaster.set(camPos, camDir);
+  }
+}
+
+// Get the XR raycaster for use in other modules
+export function getXRRaycaster() {
+  return xrRaycaster;
+}
+
+// Check if in XR mode
+export function isInXRMode() {
+  return renderer && renderer.xr.isPresenting;
 }
 
 
@@ -331,10 +443,25 @@ export function onWindowResize() {
 
 // Get hand detection state
 export function getHandDetectionState() {
-  return handDetector.getHandState();
+  return {
+    ...handDetector.getHandState(),
+    isIndexPointing: isIndexPointing
+  };
+}
+
+// Set callback for index finger selection (like click in XR mode)
+export function setIndexSelectCallback(callback) {
+  onIndexSelectCallback = callback;
+  console.log('Index select callback registered for XR mode');
+}
+
+// Check if index is currently pointing (for continuous detection)
+export function isIndexSelecting() {
+  return isIndexPointing;
 }
 
 // Clean up
 export function cleanup() {
   handDetector.stopDetection();
+  onIndexSelectCallback = null;
 }

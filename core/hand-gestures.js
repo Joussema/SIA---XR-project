@@ -7,6 +7,7 @@ export class HandDetection {
         this.hands = null;
         this.isHandOpen = false;
         this.isDetecting = false;
+        this.isIndexOnly = false;
         this.onHandStateChange = null;
         
         this.LANDMARK_INDICES = {
@@ -141,20 +142,38 @@ export class HandDetection {
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
             const landmarks = results.multiHandLandmarks[0];
             const wasHandOpen = this.isHandOpen;
-            this.isHandOpen = this.detectHandOpen(landmarks);
-            
-            if (wasHandOpen !== this.isHandOpen && this.onHandStateChange) {
-                this.onHandStateChange(this.isHandOpen);
+            const wasIndexOnly = this.isIndexOnly;
+
+            this.isIndexOnly = this.detectIndexOnly(landmarks);
+            this.isHandOpen = this.detectHandOpen(landmarks) && !this.isIndexOnly;
+
+            if (
+                (wasHandOpen !== this.isHandOpen ||
+                wasIndexOnly !== this.isIndexOnly) &&
+                this.onHandStateChange
+            ) {
+                this.onHandStateChange({
+                    isHandOpen: this.isHandOpen,
+                    isIndexOnly: this.isIndexOnly
+                });
             }
+
         } else {
-            if (this.isHandOpen !== false) {
+
+            if (this.isHandOpen || this.isIndexOnly) {
                 this.isHandOpen = false;
+                this.isIndexOnly = false;
+
                 if (this.onHandStateChange) {
-                    this.onHandStateChange(false);
+                    this.onHandStateChange({
+                        isHandOpen: false,
+                        isIndexOnly: false
+                    });
                 }
             }
         }
     }
+
 
     detectHandOpen(landmarks) {
         const thumbTip = landmarks[this.LANDMARK_INDICES.THUMB_TIP];
@@ -219,6 +238,33 @@ export class HandDetection {
     setHandStateCallback(callback) {
         this.onHandStateChange = callback;
     }
+    detectIndexOnly(landmarks) {
+    const I = this.LANDMARK_INDICES;
+
+    const indexExtended =
+        landmarks[I.INDEX_FINGER_TIP].y <
+        landmarks[I.INDEX_FINGER_MCP].y;
+
+    const middleClosed =
+        landmarks[I.MIDDLE_FINGER_TIP].y >
+        landmarks[I.MIDDLE_FINGER_MCP].y;
+
+    const ringClosed =
+        landmarks[I.RING_FINGER_TIP].y >
+        landmarks[I.RING_FINGER_MCP].y;
+
+    const pinkyClosed =
+        landmarks[I.PINKY_TIP].y >
+        landmarks[I.PINKY_MCP].y;
+
+    return (
+        indexExtended &&
+        middleClosed &&
+        ringClosed &&
+        pinkyClosed
+    );
+}
+
 }
 
 export const handDetector = new HandDetection();

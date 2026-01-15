@@ -12,6 +12,111 @@ let hoverElement = null;
 let currentAnswer = null;
 let puzzleDataCache = null;
 
+// VR 3D text panel
+let vrTextPanel = null;
+let vrTextCanvas = null;
+let vrTextContext = null;
+let vrTextTexture = null;
+
+// Create 3D text panel for VR mode
+function createVRTextPanel() {
+    // Create canvas for text
+    vrTextCanvas = document.createElement('canvas');
+    vrTextCanvas.width = 512;
+    vrTextCanvas.height = 128;
+    vrTextContext = vrTextCanvas.getContext('2d');
+    
+    // Create texture from canvas
+    vrTextTexture = new THREE.CanvasTexture(vrTextCanvas);
+    vrTextTexture.minFilter = THREE.LinearFilter;
+    
+    // Create plane geometry for the panel
+    const geometry = new THREE.PlaneGeometry(1.5, 0.4);
+    const material = new THREE.MeshBasicMaterial({
+        map: vrTextTexture,
+        transparent: true,
+        side: THREE.DoubleSide,
+        depthTest: false
+    });
+    
+    vrTextPanel = new THREE.Mesh(geometry, material);
+    vrTextPanel.renderOrder = 9998;
+    vrTextPanel.visible = false;
+    
+    return vrTextPanel;
+}
+
+// Update VR text panel content
+function updateVRTextPanel(text, show = true) {
+    if (!vrTextContext || !vrTextPanel) return;
+    
+    // Clear canvas
+    vrTextContext.clearRect(0, 0, vrTextCanvas.width, vrTextCanvas.height);
+    
+    if (show && text) {
+        // Draw background
+        vrTextContext.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        vrTextContext.roundRect(0, 0, vrTextCanvas.width, vrTextCanvas.height, 10);
+        vrTextContext.fill();
+        
+        // Draw text
+        vrTextContext.fillStyle = 'white';
+        vrTextContext.font = '24px sans-serif';
+        vrTextContext.textAlign = 'center';
+        vrTextContext.textBaseline = 'middle';
+        
+        // Word wrap
+        const words = text.split(' ');
+        let lines = [];
+        let currentLine = '';
+        const maxWidth = vrTextCanvas.width - 40;
+        
+        for (const word of words) {
+            const testLine = currentLine + (currentLine ? ' ' : '') + word;
+            const metrics = vrTextContext.measureText(testLine);
+            if (metrics.width > maxWidth && currentLine) {
+                lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        lines.push(currentLine);
+        
+        // Draw lines
+        const lineHeight = 28;
+        const startY = (vrTextCanvas.height - lines.length * lineHeight) / 2 + lineHeight / 2;
+        lines.forEach((line, i) => {
+            vrTextContext.fillText(line, vrTextCanvas.width / 2, startY + i * lineHeight);
+        });
+        
+        vrTextPanel.visible = true;
+    } else {
+        vrTextPanel.visible = false;
+    }
+    
+    // Update texture
+    vrTextTexture.needsUpdate = true;
+}
+
+// Position VR text panel in front of camera
+function positionVRTextPanel() {
+    if (!vrTextPanel || !camera) return;
+    
+    const camPos = new THREE.Vector3();
+    const camDir = new THREE.Vector3();
+    camera.getWorldPosition(camPos);
+    camera.getWorldDirection(camDir);
+    
+    // Position panel in front of camera, slightly below center
+    const panelPos = camPos.clone().add(camDir.multiplyScalar(2));
+    panelPos.y -= 0.3; // Slightly below eye level
+    vrTextPanel.position.copy(panelPos);
+    
+    // Face the camera
+    vrTextPanel.lookAt(camPos);
+}
+
 async function loadPuzzleData() {
     if (puzzleDataCache) return puzzleDataCache;
     try {
@@ -30,6 +135,12 @@ export async function initPuzzle(scene, roomRoot) {
     puzzleActive = true;
     spheres = [];
     currentAnswer = null;
+
+    // Create VR text panel if it doesn't exist
+    if (!vrTextPanel) {
+        createVRTextPanel();
+        scene.add(vrTextPanel);
+    }
 
     // Create UI elements if they don't exist
     if (!document.getElementById('puzzle-status')) {
@@ -281,14 +392,26 @@ export function updatePuzzle(raycaster, interactPressed) {
 
     const intersects = raycaster.intersectObjects(spheres);
 
+    // Check if in VR mode
+    const isVR = renderer && renderer.xr.isPresenting;
+
     if (intersects.length > 0) {
         const hit = intersects[0].object;
         const statement = hit.userData.statement;
         const colorName = hit.userData.name;
 
-        // Update hover text
-        hoverElement.textContent = statement;
-        hoverElement.style.display = 'block';
+        // Update hover text - use VR panel in VR mode, HTML in desktop
+        if (isVR) {
+            updateVRTextPanel(statement, true);
+            positionVRTextPanel();
+            // Hide HTML element in VR
+            hoverElement.style.display = 'none';
+        } else {
+            hoverElement.textContent = statement;
+            hoverElement.style.display = 'block';
+            // Hide VR panel in desktop
+            if (vrTextPanel) vrTextPanel.visible = false;
+        }
 
         if (interactPressed) {
             if (colorName === currentAnswer) {
@@ -398,7 +521,12 @@ export function updatePuzzle(raycaster, interactPressed) {
             }
         }
     } else {
-        hoverElement.style.display = 'none';
+        // Hide hover when not looking at sphere
+        if (isVR) {
+            updateVRTextPanel('', false);
+        } else {
+            hoverElement.style.display = 'none';
+        }
     }
 }
 
@@ -423,4 +551,5 @@ export function cleanupPuzzle() {
 
     if (statusElement) statusElement.style.display = 'none';
     if (hoverElement) hoverElement.style.display = 'none';
+    if (vrTextPanel) vrTextPanel.visible = false;
 }

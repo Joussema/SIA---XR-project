@@ -1,5 +1,5 @@
 //import { initScene, renderer, camera, scene, setupVRControllers, onButtonClicked, onWindowResize, updateMovement, setupControls, dolly } from './core/init.js';
-import { initScene, renderer, camera, scene, setupVR, onButtonClicked, onWindowResize, updateMovement, setupControls, dolly } from './core/init.js';
+import { initScene, renderer, camera, scene, setupVR, onButtonClicked, onWindowResize, updateMovement, setupControls, dolly, updateXRCursor, getXRRaycaster, isInXRMode } from './core/init.js';
 import * as THREE from 'three';
 import { setupFlashlight } from './game/flashlight.js';
 import { setupAudio, playSound, playPositionalSound, prefetchSound, prefetchModel } from './game/audioManager.js';
@@ -194,10 +194,17 @@ function animate() {
   }
 
   // Update raycaster for center of screen (crosshair)
-  raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-
-  // For 'click', we can add a flag `wasClicked` reset at end of frame?
-  updatePuzzle(raycaster, window.wasClicked);
+  // Use XR raycaster in VR mode, regular raycaster in desktop mode
+  if (isInXRMode()) {
+    updateXRCursor();
+    const xrRaycaster = getXRRaycaster();
+    if (xrRaycaster) {
+      updatePuzzle(xrRaycaster, window.wasClicked);
+    }
+  } else {
+    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+    updatePuzzle(raycaster, window.wasClicked);
+  }
   window.wasClicked = false; // Reset click flag
 
   // --- SROOM PUZZLE LOGIC END ---
