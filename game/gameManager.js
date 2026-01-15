@@ -63,6 +63,22 @@ export class GameManager {
       return bp;
     }
 
+    // Check for Win Condition (Streak Reached)
+    if (this.exitCount >= this.targetExit) {
+      console.log(`Generating Blueprint: Target Reached (${this.exitCount}) - Spawning Ending Room`);
+      const bp = {
+        step: stepIndex,
+        forwardRoomType: 'ending',
+        backwardRoomType: 'deadend',
+        hasAnomaly: false,
+        anomalyType: null,
+        anomalyLocation: null,
+        correctDecision: 'forward' // Go towards the light
+      };
+      this.blueprints.set(stepIndex, bp);
+      return bp;
+    }
+
     // Available room types. More types can be added here as long as
     // corresponding GLB definitions exist in environment/rooms.js.
     const roomTypes = ['corridor', 'sroom', 'runroom'];
@@ -75,7 +91,7 @@ export class GameManager {
     const backwardRoomType_placeholder = 'bufferzone'; // Temporary, will be set correctly at return.
 
     // Randomly decide if an anomaly should appear (e.g., 50% chance).
-    const hasAnomaly = Math.random() < 0.6;
+    const hasAnomaly = Math.random() < 0;
     let anomalyType = null;
     let anomalyLocation = null;
 

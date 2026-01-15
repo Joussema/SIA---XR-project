@@ -63,6 +63,31 @@ export function stopMainTheme() {
     }
 }
 
+let endingThemeElement = null;
+
+export function playEndingTheme() {
+    if (endingThemeElement) return; // Already playing
+
+    const audio = document.createElement('audio');
+    audio.src = 'sounds/ending music.mp3';
+    audio.loop = true;
+    audio.volume = 0.8;
+    endingThemeElement = audio;
+
+    audio.play().catch(e => console.error("Failed to play ending theme:", e));
+    console.log("Playing ending theme...");
+}
+
+export function stopEndingTheme() {
+    if (endingThemeElement) {
+        endingThemeElement.pause();
+        endingThemeElement.currentTime = 0;
+        endingThemeElement.remove();
+        endingThemeElement = null;
+        console.log("Ending theme stopped.");
+    }
+}
+
 export function playSound(soundName) {
     const audio = new Audio(`sounds/${soundName}`);
     audio.volume = 1.0;

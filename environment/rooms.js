@@ -203,4 +203,22 @@ export const rooms = [
       },
     ],
   },
+  {
+    id: 'ending',
+    modelPath: 'models/ending room.glb',
+    defaultUp: [0, 1, 0],
+    preRotation: 0,
+    entrances: [
+      {
+        id: 'start',
+        position: [10, 2, 16],
+        forward: [0, 0, 1],
+      },
+      {
+        id: 'end',
+        position: [-10, 2, -16],
+        forward: [0, 0, -1],
+      },
+    ],
+  },
 ];

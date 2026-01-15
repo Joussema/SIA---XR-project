@@ -1,5 +1,5 @@
-export function showLostScreen() {
-    console.log('Displaying YOU LOST screen');
+export function showLostScreen(message = 'YOU LOST') {
+    console.log(`Displaying ${message} screen`);
 
     let gameOverScreen = document.getElementById('game-over-screen');
     if (!gameOverScreen) {
@@ -17,7 +17,7 @@ export function showLostScreen() {
         gameOverScreen.style.zIndex = '9999';
 
         const text = document.createElement('h1');
-        text.textContent = 'YOU LOST';
+        text.textContent = message;
         text.style.color = 'red';
         text.style.fontSize = '5rem';
         text.style.fontFamily = 'serif';
@@ -27,5 +27,8 @@ export function showLostScreen() {
         document.body.appendChild(gameOverScreen);
     } else {
         gameOverScreen.style.display = 'flex';
+        // Update text if screen already exists
+        const text = gameOverScreen.querySelector('h1');
+        if (text) text.textContent = message;
     }
 }

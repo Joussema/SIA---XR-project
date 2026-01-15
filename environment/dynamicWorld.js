@@ -43,7 +43,7 @@ export async function initDynamicWorld() {
   const loader = new SimpleModelLoader(scene);
   // Minimal set to load initially (only what's needed for first step)
   const essential = ['bufferzone', 'corridor', 'weepingangelroom', 'deadend'];
-  const lazy = ['sroom', 'scaryladyroom', 'scarygang', 'fiendroom', 'runroom'];
+  const lazy = ['sroom', 'scaryladyroom', 'scarygang', 'fiendroom', 'runroom', 'ending'];
 
   // Load essential templates first so the app can start quickly.
   for (const def of rooms) {
@@ -87,7 +87,7 @@ async function loadLazyTemplates(loader, lazyIds) {
  * @param {RoomModule|null} fromBuffer The buffer instance to retain as
  *   the new centre, or null to discard everything.
  */
-function clearWorld(fromBuffer) {
+export function clearWorld(fromBuffer) {
   const toRemove = [forwardRoom, forwardBuffer, backwardRoom, backwardBuffer];
   toRemove.forEach((inst) => {
     if (inst && inst.root && (!fromBuffer || inst.root !== fromBuffer.root)) {

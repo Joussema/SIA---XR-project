@@ -17,6 +17,7 @@ import {
 import { updateAnomalies, spawnAnomalyManual, clearAnomaly } from './anomalies/anomalyManager.js';
 import { initPuzzle, updatePuzzle, cleanupPuzzle } from './Sroom/doorPuzzle.js';
 import { runRoomEvent } from './game/runRoomEvent.js';
+import { endingEvent } from './game/endingEvent.js';
 
 
 // Create a game manager instance. The GameManager controls logic for
@@ -195,6 +196,18 @@ function animate() {
     runRoomEvent.cleanup();
   }
   // --- RUN ROOM EVENT LOGIC END ---
+
+  // --- ENDING EVENT LOGIC START ---
+  if (endingEvent.isActive()) {
+    endingEvent.update(playerPos);
+  } else if (bp.forwardRoomType === 'ending') {
+    const forwardRoom = getRoomInstance('forward');
+    if (forwardRoom && forwardRoom.root) {
+      endingEvent.init(forwardRoom.root);
+      endingEvent.update(playerPos);
+    }
+  }
+  // --- ENDING EVENT LOGIC END ---
 
   // Update any active anomalies (animation and cleanup of lifetime).
   updateAnomalies();
