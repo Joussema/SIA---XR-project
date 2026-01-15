@@ -46,6 +46,23 @@ export class GameManager {
    * @returns {object} A blueprint object.
    */
   generateBlueprint(stepIndex) {
+    // FORCE INITIAL STATE: Step 0 is always Corridor (Forward) and Deadend (Backward)
+    if (stepIndex === 0) {
+      console.log("Generating Initial Blueprint (Step 0): Force Safe Start");
+      // Store and return fixed blueprint
+      const bp = {
+        step: 0,
+        forwardRoomType: 'corridor',
+        backwardRoomType: 'deadend',
+        hasAnomaly: false,
+        anomalyType: null,
+        anomalyLocation: null,
+        correctDecision: 'forward' // Safe to go forward
+      };
+      this.blueprints.set(0, bp);
+      return bp;
+    }
+
     // Available room types. More types can be added here as long as
     // corresponding GLB definitions exist in environment/rooms.js.
     const roomTypes = ['corridor', 'sroom', 'runroom'];

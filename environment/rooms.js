@@ -198,7 +198,7 @@ export const rooms = [
       {
         id: 'end',
         // Standard room exit
-        position: [0, 2, -20],
+        position: [0, 20, -20],
         forward: [0, 0, 1],
       },
     ],

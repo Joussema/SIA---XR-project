@@ -25,34 +25,7 @@ import { runRoomEvent } from './game/runRoomEvent.js';
 const gameManager = new GameManager();
 
 // Simple target + raycast helpers
-let raycaster = new THREE.Raycaster();
-let targetMesh = null;
-let targetNeedsUpdate = false;
-
-function spawnTarget() {
-  if (targetMesh && targetMesh.parent) {
-    targetMesh.parent.remove(targetMesh);
-  }
-  const geom = new THREE.SphereGeometry(1.2, 24, 16);
-  const mat = new THREE.MeshBasicMaterial({ color: 0xffff00, depthTest: false, depthWrite: false, side: THREE.DoubleSide, opacity: 1, transparent: false });
-  targetMesh = new THREE.Mesh(geom, mat);
-  targetMesh.renderOrder = 9999;
-  scene.add(targetMesh);
-  targetNeedsUpdate = true;
-  console.log('Crosshair test target spawned');
-}
-
-function keepTargetInFrontOfCamera() {
-  if (!targetMesh) return;
-  const camPos = new THREE.Vector3();
-  const camDir = new THREE.Vector3();
-  camera.getWorldPosition(camPos);
-  camera.getWorldDirection(camDir);
-  const pos = camPos.clone().add(camDir.multiplyScalar(3));
-  targetMesh.position.copy(pos);
-  targetMesh.lookAt(camPos);
-  targetNeedsUpdate = false;
-}
+let raycaster = new THREE.Raycaster(); // Restored for main game logic
 
 // UI element for displaying game state and blueprint information.
 let infoDiv;
@@ -225,10 +198,7 @@ function animate() {
 
   // Update any active anomalies (animation and cleanup of lifetime).
   updateAnomalies();
-  // Keep target in front of camera
-  if (targetMesh && targetNeedsUpdate) {
-    keepTargetInFrontOfCamera();
-  }
+
 
   // Refresh overlay continuously in case of dynamic changes (e.g. VR session).
   updateOverlay();
@@ -299,34 +269,6 @@ async function start() {
   // Hook up Ghost Catch Event
   runRoomEvent.onPlayerCaught = handleGhostCatch;
 
-  // ---- Add a simple visible target attached to the camera ----
-  spawnTarget();
-  keepTargetInFrontOfCamera();
-
-  // Click to raycast through the screen center (NDC 0,0)
-  const tryHit = () => {
-    if (!targetMesh) return;
-    const ndcCenter = new THREE.Vector2(0, 0);
-    raycaster.setFromCamera(ndcCenter, camera);
-    const hit = raycaster.intersectObject(targetMesh, false);
-    if (hit.length > 0) {
-      console.log('hit');
-      // Remove the target when hit
-      if (targetMesh.parent) targetMesh.parent.remove(targetMesh);
-      targetMesh = null;
-    }
-  };
-  window.addEventListener('click', () => { tryHit(); window.wasClicked = true; });
-  window.addEventListener('pointerdown', () => { tryHit(); window.wasClicked = true; });
-
-  // Optional: press R to respawn target for repeated testing
-  window.addEventListener('keydown', (e) => {
-    if (e.key.toLowerCase() === 'r' && !targetMesh) {
-      spawnTarget();
-      keepTargetInFrontOfCamera();
-      console.log('Target respawned');
-    }
-  });
 
   // Start the render loop.
   renderer.setAnimationLoop(animate);
@@ -335,6 +277,10 @@ async function start() {
 start().catch((err) => {
   console.error('Failed to start game:', err);
 });
+
+// Restore Click Interactions (Essential for Puzzle)
+window.addEventListener('click', () => { window.wasClicked = true; });
+window.addEventListener('pointerdown', () => { window.wasClicked = true; });
 
 window.addEventListener('resize', onWindowResize);
 

@@ -42,8 +42,8 @@ export async function initDynamicWorld() {
   if (templatesLoaded) return;
   const loader = new SimpleModelLoader(scene);
   // Minimal set to load initially (only what's needed for first step)
-  const essential = ['bufferzone', 'corridor', 'weepingangelroom'];
-  const lazy = ['sroom', 'scaryladyroom', 'scarygang', 'fiendroom', 'deadend', 'runroom'];
+  const essential = ['bufferzone', 'corridor', 'weepingangelroom', 'deadend'];
+  const lazy = ['sroom', 'scaryladyroom', 'scarygang', 'fiendroom', 'runroom'];
 
   // Load essential templates first so the app can start quickly.
   for (const def of rooms) {

@@ -9,6 +9,7 @@ export function setupFlashlight(camera) {
     mainBeam.distance = 60;
     mainBeam.position.set(0, 0, 0);
     mainBeam.target.position.set(0, 0, -1);
+    mainBeam.userData.originalIntensity = 200;
 
     // 2. Spill Beam (Wide, Dim, Soft)
     const spillBeam = new THREE.SpotLight(0xaabbff, 20); // Much dimmer
@@ -18,6 +19,7 @@ export function setupFlashlight(camera) {
     spillBeam.distance = 30; // Shorter range
     spillBeam.position.set(0, 0, 0);
     spillBeam.target.position.set(0, 0, -1);
+    spillBeam.userData.originalIntensity = 20;
 
     // Add lights and targets to camera
     camera.add(mainBeam);
@@ -31,7 +33,6 @@ export function setupFlashlight(camera) {
             const newState = !mainBeam.visible;
             mainBeam.visible = newState;
             spillBeam.visible = newState;
-            // Optional: Play a click sound
         }
     });
 
@@ -42,36 +43,43 @@ export function setupFlashlight(camera) {
 let activeLights = null;
 
 export function triggerFlashlightFlicker(duration = 4000) {
-    if (!activeLights) return;
+    console.log("Triggering Flashlight Flicker...", duration);
+    if (!activeLights) {
+        console.error("Flashlight Error: No active lights found!");
+        return;
+    }
 
     const { mainBeam, spillBeam } = activeLights;
-    const originalState = mainBeam.visible;
     const startTime = Date.now();
-
-    // Ensure lights are on for the flicker effect if they were off? 
-    // Or just flicker whatever state they are in? 
-    // Usually horror flicker implies it turns OFF and ON.
-    // Let's assume user wants it to flicker *on/off*.
 
     const flickerInterval = setInterval(() => {
         const elapsed = Date.now() - startTime;
         if (elapsed >= duration) {
             clearInterval(flickerInterval);
-            // Restore original state (or force ON if desire is to ensure player can see after?)
-            // Let's restore original state to be safe, or Force ON if it's critical.
-            // Horror trope: Flashlight usually stays ON after flicker.
+            // Restore original state
+            if (mainBeam.userData.originalIntensity) {
+                mainBeam.intensity = mainBeam.userData.originalIntensity;
+                spillBeam.intensity = spillBeam.userData.originalIntensity;
+            }
             mainBeam.visible = true;
             spillBeam.visible = true;
             return;
         }
 
         // Random flicker
-        const isVisible = Math.random() > 0.5;
-        mainBeam.visible = isVisible;
-        spillBeam.visible = isVisible;
+        const isVisible = Math.random() > 0.4;
 
-    }, 100); // Fast flicker every 100ms
+        // Use intensity for smoother/more reliable flicker
+        if (mainBeam.userData.originalIntensity) {
+            mainBeam.intensity = isVisible ? mainBeam.userData.originalIntensity : 0;
+            spillBeam.intensity = isVisible ? spillBeam.userData.originalIntensity : 0;
+        }
+        mainBeam.visible = true;
+        spillBeam.visible = true;
+
+    }, 80);
 }
+
 // Continuous flicker state
 let infiniteFlickerInterval = null;
 
@@ -83,8 +91,10 @@ export function startInfiniteFlicker() {
 
     infiniteFlickerInterval = setInterval(() => {
         const isVisible = Math.random() > 0.5;
-        mainBeam.visible = isVisible;
-        spillBeam.visible = isVisible;
+        if (mainBeam.userData.originalIntensity) {
+            mainBeam.intensity = isVisible ? mainBeam.userData.originalIntensity : 0;
+            spillBeam.intensity = isVisible ? spillBeam.userData.originalIntensity : 0;
+        }
     }, 100);
 }
 
@@ -95,6 +105,10 @@ export function stopInfiniteFlicker() {
     }
     // Restore lights to ON
     if (activeLights) {
+        if (activeLights.mainBeam.userData.originalIntensity) {
+            activeLights.mainBeam.intensity = activeLights.mainBeam.userData.originalIntensity;
+            activeLights.spillBeam.intensity = activeLights.spillBeam.userData.originalIntensity;
+        }
         activeLights.mainBeam.visible = true;
         activeLights.spillBeam.visible = true;
     }

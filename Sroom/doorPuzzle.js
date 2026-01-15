@@ -13,6 +13,26 @@ let hoverElement = null;
 let currentAnswer = null;
 let puzzleDataCache = null;
 
+// Attraction Light
+let attractionLight = null;
+let flickerInterval = null;
+
+// Helper: Create a soft glow texture
+function createGlowTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const context = canvas.getContext('2d');
+    const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gradient.addColorStop(0, 'rgba(255, 50, 0, 1)'); // Bright Red center
+    gradient.addColorStop(0.4, 'rgba(255, 0, 0, 0.4)'); // Soft dropoff
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)'); // Fade to transparent
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, 64, 64);
+    const texture = new THREE.CanvasTexture(canvas);
+    return texture;
+}
+
 // VR 3D text panel
 let vrTextPanel = null;
 let vrTextCanvas = null;
@@ -206,7 +226,7 @@ export async function initPuzzle(scene, roomRoot) {
     const puzzleGroup = new THREE.Group();
 
     sphereData.forEach(data => {
-        const geometry = new THREE.SphereGeometry(0.3, 32, 32);
+        const geometry = new THREE.SphereGeometry(0.6, 32, 32); // Increased size 0.3 -> 0.6
         const material = new THREE.MeshStandardMaterial({
             color: data.color,
             emissive: data.color,
@@ -390,6 +410,14 @@ export function updatePuzzle(raycaster, interactPressed) {
         }
 
         if (interactPressed) {
+            // --- DESPAWN ALL SPHERES ---
+            spheres.forEach(s => {
+                if (s.parent) s.parent.remove(s);
+                s.geometry.dispose();
+                s.material.dispose();
+            });
+            spheres = []; // Clear array so they aren't interactable anymore
+
             if (colorName === currentAnswer) {
                 statusElement.textContent = `Correct! ${colorName} was the answer.`;
                 statusElement.style.color = '#00ff00';
@@ -422,7 +450,22 @@ export function updatePuzzle(raycaster, interactPressed) {
                         // 1. Bells of Doom
                         setTimeout(() => {
                             console.log("Sequence: Bells of Doom");
-                            playPositionalSound('bells of doom.mp3', entrance, 5, 50);
+
+                            // Audio/Light Anchor at exact entrance location
+                            const anchor = new THREE.Object3D();
+                            entrance.getWorldPosition(anchor.position);
+                            anchor.position.y += 1.5; // Ear heightish
+                            entrance.add(anchor); // Attach to room so it moves with it if room moves (unlikely but safe)
+                            // Actually, local position is 0,0,0 relative to entrance, so just adding it to entrance works perfectly.
+                            anchor.position.set(0, 1.5, 0);
+
+                            // Use this anchor for directional sound
+                            playPositionalSound('bells of doom.mp3', anchor, 10, 60);
+
+                            // --- ATTRACT PLAYER ATTENTION ---
+                            const lightPos = new THREE.Vector3();
+                            anchor.getWorldPosition(lightPos);
+                            startAttractionLight(lightPos);
 
                             // Flashlight Flicker: 3s after bells, for 4s
                             setTimeout(() => {
@@ -434,13 +477,13 @@ export function updatePuzzle(raycaster, interactPressed) {
                             setTimeout(() => {
                                 console.log("Sequence: Heavy Footsteps");
                                 // 20% slower = 0.8 rate
-                                playPositionalSound('Heavy foot.mp3', entrance, 5, 50, 1.0, cfg.footstepsRate);
+                                playPositionalSound('Heavy foot.mp3', anchor, 10, 60, 1.0, cfg.footstepsRate);
 
                                 // 3. Growl (chained)
                                 setTimeout(() => {
                                     console.log("Sequence: Growl");
                                     // Louder = 2.0 volume
-                                    playPositionalSound('growl.mp3', entrance, 5, 50, cfg.growlVolume);
+                                    playPositionalSound('growl.mp3', anchor, 10, 60, cfg.growlVolume);
 
                                     // 4. Launch Fiend (chained)
                                     setTimeout(async () => {
@@ -459,6 +502,9 @@ export function updatePuzzle(raycaster, interactPressed) {
                                             scene.add(fiend);
 
                                             fiendActive = true;
+
+                                            // Cleanup anchor
+                                            if (anchor.parent) anchor.parent.remove(anchor);
                                         } catch (e) {
                                             console.error("Failed to spawn fiend:", e);
                                         }
@@ -528,4 +574,68 @@ export function cleanupPuzzle() {
     if (statusElement) statusElement.style.display = 'none';
     if (hoverElement) hoverElement.style.display = 'none';
     if (vrTextPanel) vrTextPanel.visible = false;
+
+    stopAttractionLight();
+}
+
+function startAttractionLight(position) {
+    stopAttractionLight(); // Clear existing
+
+    // 1. PointLight (EXTREME illumination)
+    // Intensity needs to be excessively high to paint far walls in a dark scene without fog scattering
+    attractionLight = new THREE.PointLight(0xff3300, 0, 100);
+    attractionLight.position.copy(position);
+    attractionLight.position.y += 2.0;
+    scene.add(attractionLight);
+
+    // 2. Visible Flare (Sprite) - Replaces "Bulb" with "Glow"
+    const map = createGlowTexture();
+    const material = new THREE.SpriteMaterial({
+        map: map,
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0,
+        fog: false, // Seen through fog
+        depthTest: false // Seen through walls (optional, maybe better true)
+    });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(4, 4, 1); // Large glow
+    attractionLight.add(sprite); // Attach to light
+
+    console.log("Attraction light (Flare) spawned at:", attractionLight.position);
+
+    // Flicker Logic
+    flickerInterval = setInterval(() => {
+        if (attractionLight) {
+            // High intensity range: 10 ~ 80
+            const intensity = 10 + Math.random() * 70;
+            attractionLight.intensity = intensity;
+
+            // Sync sprite opacity
+            sprite.material.opacity = 0.5 + Math.random() * 0.5; // 0.5 - 1.0
+
+            // Occasional full blackout
+            if (Math.random() < 0.1) {
+                attractionLight.intensity = 0;
+                sprite.material.opacity = 0;
+            }
+        }
+    }, 60);
+
+    // Stop after 7 seconds (User requested return to previous logic? User code showed 7s in step 95)
+    setTimeout(() => {
+        stopAttractionLight();
+        console.log("Attraction light auto-stopped after 7s");
+    }, 7000);
+}
+
+function stopAttractionLight() {
+    if (flickerInterval) {
+        clearInterval(flickerInterval);
+        flickerInterval = null;
+    }
+    if (attractionLight) {
+        if (attractionLight.parent) attractionLight.parent.remove(attractionLight);
+        attractionLight = null;
+    }
 }
