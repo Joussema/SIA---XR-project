@@ -2,7 +2,8 @@
 import { initScene, renderer, camera, scene, setupVR, onButtonClicked, onWindowResize, updateMovement, setupControls, dolly, updateXRCursor, getXRRaycaster, isInXRMode } from './core/init.js';
 import * as THREE from 'three';
 import { setupFlashlight } from './game/flashlight.js';
-import { setupAudio, playSound, playPositionalSound, prefetchSound, prefetchModel } from './game/audioManager.js';
+import { setupAudio, playSound, playPositionalSound, prefetchSound, prefetchModel, stopMainTheme } from './game/audioManager.js';
+import { showLostScreen } from './game/uiManager.js';
 
 // Exit8 step-based imports
 import { GameManager } from './game/gameManager.js';
@@ -282,7 +283,21 @@ async function start() {
     }
   }
   // Initialise the overlay for the first step.
+  // Initialise the overlay for the first step.
   updateOverlay();
+
+  // --- GAME OVER LOGIC ---
+  function handleGhostCatch() {
+    console.log('GAME OVER - PLAYER CAUGHT');
+    // Stop Main Theme
+    stopMainTheme();
+
+    // Show Shared Lost Screen
+    showLostScreen();
+  }
+
+  // Hook up Ghost Catch Event
+  runRoomEvent.onPlayerCaught = handleGhostCatch;
 
   // ---- Add a simple visible target attached to the camera ----
   spawnTarget();

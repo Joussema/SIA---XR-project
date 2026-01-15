@@ -3,6 +3,7 @@ import { freezePlayerAt, camera, renderer, dolly, scene } from '../core/init.js'
 import { playPositionalSound, stopMainTheme } from '../game/audioManager.js';
 import { triggerFlashlightFlicker } from '../game/flashlight.js';
 import { SimpleModelLoader } from '../environment/modelloader.js';
+import { showLostScreen } from '../game/uiManager.js';
 
 let spheres = [];
 let puzzleActive = false;
@@ -25,11 +26,11 @@ function createVRTextPanel() {
     vrTextCanvas.width = 512;
     vrTextCanvas.height = 128;
     vrTextContext = vrTextCanvas.getContext('2d');
-    
+
     // Create texture from canvas
     vrTextTexture = new THREE.CanvasTexture(vrTextCanvas);
     vrTextTexture.minFilter = THREE.LinearFilter;
-    
+
     // Create plane geometry for the panel
     const geometry = new THREE.PlaneGeometry(1.5, 0.4);
     const material = new THREE.MeshBasicMaterial({
@@ -38,39 +39,39 @@ function createVRTextPanel() {
         side: THREE.DoubleSide,
         depthTest: false
     });
-    
+
     vrTextPanel = new THREE.Mesh(geometry, material);
     vrTextPanel.renderOrder = 9998;
     vrTextPanel.visible = false;
-    
+
     return vrTextPanel;
 }
 
 // Update VR text panel content
 function updateVRTextPanel(text, show = true) {
     if (!vrTextContext || !vrTextPanel) return;
-    
+
     // Clear canvas
     vrTextContext.clearRect(0, 0, vrTextCanvas.width, vrTextCanvas.height);
-    
+
     if (show && text) {
         // Draw background
         vrTextContext.fillStyle = 'rgba(0, 0, 0, 0.7)';
         vrTextContext.roundRect(0, 0, vrTextCanvas.width, vrTextCanvas.height, 10);
         vrTextContext.fill();
-        
+
         // Draw text
         vrTextContext.fillStyle = 'white';
         vrTextContext.font = '24px sans-serif';
         vrTextContext.textAlign = 'center';
         vrTextContext.textBaseline = 'middle';
-        
+
         // Word wrap
         const words = text.split(' ');
         let lines = [];
         let currentLine = '';
         const maxWidth = vrTextCanvas.width - 40;
-        
+
         for (const word of words) {
             const testLine = currentLine + (currentLine ? ' ' : '') + word;
             const metrics = vrTextContext.measureText(testLine);
@@ -82,19 +83,19 @@ function updateVRTextPanel(text, show = true) {
             }
         }
         lines.push(currentLine);
-        
+
         // Draw lines
         const lineHeight = 28;
         const startY = (vrTextCanvas.height - lines.length * lineHeight) / 2 + lineHeight / 2;
         lines.forEach((line, i) => {
             vrTextContext.fillText(line, vrTextCanvas.width / 2, startY + i * lineHeight);
         });
-        
+
         vrTextPanel.visible = true;
     } else {
         vrTextPanel.visible = false;
     }
-    
+
     // Update texture
     vrTextTexture.needsUpdate = true;
 }
@@ -102,17 +103,17 @@ function updateVRTextPanel(text, show = true) {
 // Position VR text panel in front of camera
 function positionVRTextPanel() {
     if (!vrTextPanel || !camera) return;
-    
+
     const camPos = new THREE.Vector3();
     const camDir = new THREE.Vector3();
     camera.getWorldPosition(camPos);
     camera.getWorldDirection(camDir);
-    
+
     // Position panel in front of camera, slightly below center
     const panelPos = camPos.clone().add(camDir.multiplyScalar(2));
     panelPos.y -= 0.3; // Slightly below eye level
     vrTextPanel.position.copy(panelPos);
-    
+
     // Face the camera
     vrTextPanel.lookAt(camPos);
 }
@@ -351,33 +352,8 @@ export function updatePuzzle(raycaster, interactPressed) {
             stopMainTheme();
 
             // Create/Show Game Over Screen
-            let gameOverScreen = document.getElementById('game-over-screen');
-            if (!gameOverScreen) {
-                gameOverScreen = document.createElement('div');
-                gameOverScreen.id = 'game-over-screen';
-                gameOverScreen.style.position = 'fixed';
-                gameOverScreen.style.top = '0';
-                gameOverScreen.style.left = '0';
-                gameOverScreen.style.width = '100vw';
-                gameOverScreen.style.height = '100vh';
-                gameOverScreen.style.backgroundColor = 'black';
-                gameOverScreen.style.display = 'flex';
-                gameOverScreen.style.justifyContent = 'center';
-                gameOverScreen.style.alignItems = 'center';
-                gameOverScreen.style.zIndex = '9999';
-
-                const text = document.createElement('h1');
-                text.textContent = 'YOU LOST';
-                text.style.color = 'red';
-                text.style.fontSize = '5rem';
-                text.style.fontFamily = 'serif';
-                text.style.textShadow = '0 0 10px darkred';
-
-                gameOverScreen.appendChild(text);
-                document.body.appendChild(gameOverScreen);
-            } else {
-                gameOverScreen.style.display = 'flex';
-            }
+            // Create/Show Game Over Screen
+            showLostScreen();
 
             // Disable Fiend Loop
             fiendActive = false;

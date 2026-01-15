@@ -25,6 +25,7 @@ export class RunRoomEvent {
         this.floatFrequency = 0.7;
 
         this.startTime = 0;
+        this.onPlayerCaught = null;
     }
 
     async init(roomRoot) {
@@ -68,6 +69,17 @@ export class RunRoomEvent {
 
                 // Normalize direction vector (2D)
                 const dist = Math.sqrt(dx * dx + dz * dz);
+
+                // --- NEW: Check if caught ---
+                if (dist < 0.5) {
+                    console.log('RunRoomEvent: Player CAUGHT!');
+                    this.isActive = false; // Stop updating
+                    if (this.onPlayerCaught) {
+                        this.onPlayerCaught();
+                    }
+                    return;
+                }
+
                 const dirX = dist > 0 ? dx / dist : 0;
                 const dirZ = dist > 0 ? dz / dist : 0;
 
