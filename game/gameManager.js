@@ -14,7 +14,7 @@ export class GameManager {
    * Construct a new GameManager.
    * @param {number} targetExit The number of consecutive correct exits required to win.
    */
-  constructor(targetExit = 10) {
+  constructor(targetExit = 8) {
     this.targetExit = targetExit;
     this.currentStep = 0;
     this.exitCount = 0;

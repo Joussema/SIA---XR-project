@@ -192,8 +192,8 @@ export const rooms = [
       {
         id: 'start',
         // Standard room entrance
-        position: [0, 2, 2], // Fixed: -2 allows correct alignment after 180 deg rotation
-        forward: [0, 0, 1],   // Fixed: 1 Forces 180 deg rotation against buffer start (1)
+        position: [0, 2, 2], 
+        forward: [0, 0, 1],   
       },
       {
         id: 'end',
@@ -212,12 +212,12 @@ export const rooms = [
       {
         id: 'start',
         position: [10, 2, 16],
-        forward: [0, 0, -1],
+        forward: [0, 0, 1],
       },
       {
         id: 'end',
         position: [-10, 2, -16],
-        forward: [0, 0, 1],
+        forward: [0, 0, -1],
       },
     ],
   },

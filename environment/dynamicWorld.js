@@ -107,18 +107,27 @@ export function clearWorld(fromBuffer) {
  * @param {RoomModule|null} fromBuffer If provided, this buffer will be
  *   used as the centre; otherwise a new bufferzone instance is created.
  */
-export function buildWorldForBlueprint(blueprint, fromBuffer = null) {
+/**
+ *
+ * @param {object} blueprint The StepBlueprint describing the layout.
+ * @param {RoomModule|null} fromBuffer If provided, this buffer will be
+ *   used as the centre; otherwise a new bufferzone instance is created.
+ * @param {number} streakCount The current game streak to display.
+ */
+export function buildWorldForBlueprint(blueprint, fromBuffer = null, streakCount = 0) {
   // Remove current world, preserving fromBuffer if present.
   // Defer collision system update until after all objects are positioned
   clearWorld(fromBuffer);
   if (fromBuffer) {
     centerBuffer = fromBuffer;
+    // Update streak sign on existing buffer which is now center
+    updateStreakCounter(centerBuffer.root, streakCount);
   } else {
-    // Create a new centre buffer at the origin. Bufferzone acts as a
-    // neutral transition space and is the player's start position.
+    // Create a new centre buffer at the origin.
     const tmpl = templates['bufferzone'];
     centerBuffer = tmpl.clone();
     scene.add(centerBuffer.root);
+    updateStreakCounter(centerBuffer.root, streakCount);
   }
 
   // --- Forward branch ---
@@ -130,6 +139,7 @@ export function buildWorldForBlueprint(blueprint, fromBuffer = null) {
   }
   forwardRoom = forwardTmpl.clone();
   forwardBuffer = templates['bufferzone'].clone();
+  updateStreakCounter(forwardBuffer.root, streakCount);
   // Snap the forward room to the centre: its start attaches to the centre's end.
   forwardRoom.snapTo(centerBuffer, 'start', 'end');
   // Snap the forward buffer to the forward room: its start attaches to the room's end.
@@ -145,6 +155,7 @@ export function buildWorldForBlueprint(blueprint, fromBuffer = null) {
   }
   backwardRoom = backwardTmpl.clone();
   backwardBuffer = templates['bufferzone'].clone();
+  updateStreakCounter(backwardBuffer.root, streakCount);
   // Snap the first backward room with a 180° flip: its start connects to the centre's start.
   backwardRoom.snapTo(centerBuffer, 'start', 'start');
   // Snap the backward buffer to the backward room: its start attaches to the room's end.
@@ -282,4 +293,84 @@ function backgroundLoadTemplate(id) {
       console.warn('Background load failed for template:', id, e);
     }
   })();
+}
+
+// --- HELPER: Streak Counter Sign ---
+function updateStreakCounter(roomRoot, count) {
+  if (!roomRoot) return;
+
+  // Check if sign already exists
+  let signMesh = roomRoot.getObjectByName('StreakSign');
+
+  // Create texture text
+  const text = `STREAK ${count}`;
+
+  if (!signMesh) {
+    // Create new sign
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+
+    // Background: Old paper/wood look
+    ctx.fillStyle = '#4a4036'; // Dark earthy brown
+    ctx.fillRect(0, 0, 256, 128);
+
+    // Border
+    ctx.strokeStyle = '#2e2620';
+    ctx.lineWidth = 10;
+    ctx.strokeRect(0, 0, 256, 128);
+
+    // Text
+    ctx.fillStyle = '#d9cbb8'; // Faded beige
+    ctx.font = 'bold 40px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 128, 64);
+
+    // Add some noise/wear (dots)
+    for (let i = 0; i < 50; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? '#2e2620' : '#5c5042';
+      ctx.fillRect(Math.random() * 256, Math.random() * 128, 2, 2);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.MeshBasicMaterial({ map: tex });
+    const geo = new THREE.BoxGeometry(1.2, 0.6, 0.05);
+    signMesh = new THREE.Mesh(geo, mat);
+    signMesh.name = 'StreakSign';
+
+    // Position: Attached to wall
+    // Assuming corridor width ~2-3m. Position on right wall.
+    signMesh.position.set(1.4, 1.8, 0);
+    signMesh.rotation.y = -Math.PI / 2; // Facing center
+
+    roomRoot.add(signMesh);
+  } else {
+    // Update texture only
+    const mesh = signMesh;
+    const tex = mesh.material.map;
+    const canvas = tex.image;
+    const ctx = canvas.getContext('2d');
+
+    // Clear and Redraw
+    ctx.fillStyle = '#4a4036';
+    ctx.fillRect(0, 0, 256, 128);
+    ctx.strokeStyle = '#2e2620';
+    ctx.lineWidth = 10;
+    ctx.strokeRect(0, 0, 256, 128);
+
+    ctx.fillStyle = '#d9cbb8';
+    ctx.font = 'bold 40px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`STREAK ${count}`, 128, 64);
+
+    for (let i = 0; i < 50; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? '#2e2620' : '#5c5042';
+      ctx.fillRect(Math.random() * 256, Math.random() * 128, 2, 2);
+    }
+
+    tex.needsUpdate = true;
+  }
 }

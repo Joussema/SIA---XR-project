@@ -7,7 +7,7 @@ import { clearWorld } from '../environment/dynamicWorld.js';
 
 // Configuration
 const LIGHT_TRIGGER_DIST = 4.0;
-const FLOAT_DURATION = 51.0; // Shortened to end after final credit
+const FLOAT_DURATION = 38.0; // Shortened to end after final credit
 const FINAL_WAIT_DURATION = 10.0;
 const WHITE_LIGHT_POS = new THREE.Vector3(-10, 2, -14);
 const FLOAT_SPEED = 2.5; // Units per second
@@ -255,24 +255,36 @@ export const endingEvent = {
         // Another one other side
         loadAndPlace('Ancient_Warrior_Monum.glb', new THREE.Vector3(-30, 215, -45), 1.5, [Math.PI / 6, Math.PI, 0], { rotateSpeed: -0.05 });
 
+        // Extra Random Assets Triggered Early
+        for (let i = 0; i < 6; i++) {
+            const type = Math.random() > 0.5 ? 'Ancient_Stone_Meditat.glb' : 'Ancient_Guardian.glb';
+            const xPos = (Math.random() * 60) - 30;
+            const yPos = 200 + (Math.random() * 20) - 10;
+            const zPos = -10 - (Math.random() * 40);
+            loadAndPlace(type, new THREE.Vector3(xPos, yPos, zPos), 0.8 + Math.random(), [Math.random(), Math.random(), Math.random()], {
+                rotateSpeed: (Math.random() - 0.5),
+                velocity: new THREE.Vector3((Math.random() - 0.5), (Math.random() - 0.5) * 0.2, -0.5)
+            });
+        }
+
         // Moving debris/statues crossing path early on
         loadAndPlace('Ancient_Stone_Meditat.glb', new THREE.Vector3(-40, 200, -20), 1.0, [0, 0, 0], { velocity: new THREE.Vector3(1.5, 0, -0.5), rotateSpeed: 0.2 });
 
         // 2. Introduction Credit
-        // Z = -50 (~20 seconds in)
-        createBox(["This game was", "developed by"], 0xffffff, new THREE.Vector3(0, 202, -50), [0, 0, 0]);
+        // Z = -45
+        createBox(["This game was", "developed by"], 0xffffff, new THREE.Vector3(0, 202, -45), [0, 0, 0]);
 
         // 3. Oussema (Red)
-        // Z = -75 (~30 seconds in)
-        const box2 = createBox(["Oussema Jebali"], 0xff0000, new THREE.Vector3(-6, 205, -75), [0, 0.2, 0]);
+        // Z = -60
+        const box2 = createBox(["Oussema Jebali"], 0xff0000, new THREE.Vector3(-6, 205, -60), [0, 0.2, 0]);
         box2.userData.rotateSpeed = 0.3;
 
         // Dynamic elements between credits (Flying Guardian)
         loadAndPlace('Ancient_Guardian.glb', new THREE.Vector3(40, 190, -65), 1.5, [0, -Math.PI / 2, 0], { velocity: new THREE.Vector3(-2.5, 0.5, 0) });
 
         // 4. Youssef (Red)
-        // Z = -100 (~40 seconds in)
-        const box3 = createBox(["Youssef Chaari"], 0xff0000, new THREE.Vector3(6, 198, -100), [0, -0.2, 0]);
+        // Z = -75
+        const box3 = createBox(["Youssef Chaari"], 0xff0000, new THREE.Vector3(6, 198, -75), [0, -0.2, 0]);
         box3.userData.rotateSpeed = -0.3;
 
         // More atmosphere
@@ -280,9 +292,10 @@ export const endingEvent = {
             loadAndPlace('Ancient_Stone_Meditat.glb', new THREE.Vector3((i * 15) - 15, 215, -90 - (i * 10)), 0.8, [Math.random(), Math.random(), Math.random()], { rotateSpeed: 0.5, rotateXSpeed: 0.5 });
         }
 
-        // 5. Iheb (White)
-        // Z = -125 (~50 seconds in)
-        createBox(["Iheb Amri"], 0xffffff, new THREE.Vector3(0, 200, -125), [0, 0, 0]);
+        // 5. Iheb (Red, Tilted Left)
+        // Z = -90
+        const box4 = createBox(["Iheb Amri"], 0xff0000, new THREE.Vector3(-6, 200, -90), [0, 0.2, 0]);
+        box4.userData.rotateSpeed = 0.3;
 
         // 6. Finale Swarm
         // Z = -130 to -155

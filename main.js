@@ -54,14 +54,19 @@ function updateOverlay() {
 }
 
 // Prefetch forward/backward models and likely sounds in the background
+import { rooms } from './environment/rooms.js';
+
 function prefetchBlueprintAssets(bp) {
   if (!bp) return;
   try {
-    prefetchModel(`models/${bp.forwardRoomType}.glb`);
-    prefetchModel(`models/${bp.backwardRoomType}.glb`);
+    const forwardDef = rooms.find(r => r.id === bp.forwardRoomType);
+    if (forwardDef) prefetchModel(forwardDef.modelPath);
+
+    const backwardDef = rooms.find(r => r.id === bp.backwardRoomType);
+    if (backwardDef) prefetchModel(backwardDef.modelPath);
+
     if (bp.hasAnomaly && bp.anomalyType) {
       // Example: if the anomaly type references a specific sound name use that. Map types as needed.
-
     }
   } catch (e) { console.warn('Prefetch failed:', e); }
 }
@@ -88,7 +93,7 @@ function animate() {
     // Retrieve the blueprint for the new step.
     const bp = gameManager.getBlueprint(gameManager.currentStep);
     // Rebuild the world around the chosen buffer.
-    buildWorldForBlueprint(bp, chosenBuffer);
+    buildWorldForBlueprint(bp, chosenBuffer, gameManager.exitCount);
     // If the blueprint specifies an anomaly, spawn it in the appropriate room.
     if (bp.hasAnomaly) {
       const roomInst = getRoomInstance(bp.anomalyLocation);
@@ -252,7 +257,7 @@ async function start() {
   gameManager.initGame();
   // Build the initial world (step 0).
   const initialBlueprint = gameManager.getBlueprint(0);
-  buildWorldForBlueprint(initialBlueprint, null);
+  buildWorldForBlueprint(initialBlueprint, null, gameManager.exitCount);
   // Prefetch assets for initial blueprint in the background
   prefetchBlueprintAssets(initialBlueprint);
   // If the initial blueprint has an anomaly, spawn it now.
