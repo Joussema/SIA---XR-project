@@ -14,7 +14,7 @@ export class GameManager {
    * Construct a new GameManager.
    * @param {number} targetExit The number of consecutive correct exits required to win.
    */
-  constructor(targetExit = 8) {
+  constructor(targetExit = 10) {
     this.targetExit = targetExit;
     this.currentStep = 0;
     this.exitCount = 0;
@@ -46,37 +46,62 @@ export class GameManager {
    * - Remainder filled with Corridors
    */
   generateQueue() {
-    const queue = ['sroom', 'runroom']; // Always include sroom AND runroom
+    let isValidQueue = false;
+    let attempts = 0;
 
-    // Other Anomalies
-    const potentialAnomalies = ['scaryladyroom', 'scarygang', 'fiendroom', 'weepingangelroom'];
-    // Shuffle potential anomalies to pick random ones if we limit count,
-    // or just iterate and decide chance for each.
-    // Increased chance to 70% per anomaly to reduce repetitiveness
-    potentialAnomalies.forEach(type => {
-      if (Math.random() < 0.7) {
-        queue.push(type);
+    while (!isValidQueue && attempts < 50) {
+      attempts++;
+      const queue = ['sroom', 'runroom']; // Always include sroom AND runroom
+
+      // Other Anomalies
+      const potentialAnomalies = ['scaryladyroom', 'scarygang', 'fiendroom', 'weepingangelroom'];
+      // Shuffle potential anomalies to pick random ones if we limit count,
+      // or just iterate and decide chance for each.
+      // Increased chance to 70% per anomaly to reduce repetitiveness
+      potentialAnomalies.forEach(type => {
+        if (Math.random() < 0.8) {
+          queue.push(type);
+        }
+      });
+
+      // Fill the rest of the 9 slots with 'corridor'
+      while (queue.length < 9) {
+        queue.push('corridor');
       }
-    });
 
-    // Fill the rest of the 9 slots with 'corridor'
-    while (queue.length < 9) {
-      queue.push('corridor');
+      // If we have too many, truncate to 9
+      while (queue.length > 9) {
+        queue.pop();
+      }
+
+      // Shuffle
+      for (let i = queue.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [queue[i], queue[j]] = [queue[j], queue[i]];
+      }
+
+      // Validation: Check for 3 consecutive corridors
+      let consecutiveCorridors = 0;
+      let maxConsecutive = 0;
+      for (const room of queue) {
+        if (room === 'corridor') {
+          consecutiveCorridors++;
+        } else {
+          consecutiveCorridors = 0;
+        }
+        maxConsecutive = Math.max(maxConsecutive, consecutiveCorridors);
+      }
+
+      if (maxConsecutive < 3) {
+        this.eventQueue = queue;
+        isValidQueue = true;
+        console.log(`Generated Event Queue (Attempt ${attempts}):`, this.eventQueue);
+      }
     }
 
-    // If we have too many, truncate to 9
-    while (queue.length > 9) {
-      queue.pop();
+    if (!isValidQueue) {
+      console.warn("Failed to generate valid queue after 50 attempts. Using last generated.");
     }
-
-    // Shuffle
-    for (let i = queue.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [queue[i], queue[j]] = [queue[j], queue[i]];
-    }
-
-    this.eventQueue = queue;
-    console.log("Generated Event Queue:", this.eventQueue);
   }
 
   /**

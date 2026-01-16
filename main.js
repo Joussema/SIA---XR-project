@@ -245,6 +245,8 @@ async function start() {
   // ADD THIS LINE - Initialize hand detection
 
   // Create a simple overlay for debug and game state information.
+  // Create a simple overlay for debug and game state information.
+  /*
   infoDiv = document.createElement('div');
   infoDiv.id = 'gameInfo';
   infoDiv.style.position = 'absolute';
@@ -253,6 +255,7 @@ async function start() {
   infoDiv.style.color = '#fff';
   infoDiv.style.zIndex = '100';
   document.body.appendChild(infoDiv);
+  */
   // Reset the game manager.
   gameManager.initGame();
   // Build the initial world (step 0).

@@ -14,15 +14,15 @@ export class RunRoomEvent {
         this.screamSound = null;
 
         // Configuration
-        this.signSpawnPosition = new THREE.Vector3(0, -1, 2);
-        this.ghostSpawnOffset = new THREE.Vector3(0, 1, 10); // Z is magnitude behind sign
+        this.signSpawnPosition = new THREE.Vector3(0, -1, -2);
+        this.ghostSpawnOffset = new THREE.Vector3(0, 1, 12); // Z is magnitude behind sign
         this.triggerDistance = 2.0;
-        this.chaseSpeed = 1.3;
+        this.chaseSpeed = 1.4;
 
         // New Tunables
-        this.ghostScale = 1.0;
+        this.ghostScale = 1.1;
         this.floatAmplitude = 0.2;
-        this.floatFrequency = 0.7;
+        this.floatFrequency = 1;
 
         this.startTime = 0;
         this.onPlayerCaught = null;
