@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { scene, camera, renderer, freezePlayerAt, unfreezePlayer } from '../core/init.js';
+import { scene, camera, renderer, freezePlayerAt, unfreezePlayer, dolly } from '../core/init.js';
 import { stopMainTheme, playSound, playEndingTheme, stopEndingTheme } from './audioManager.js';
 import { showLostScreen } from './uiManager.js';
 import { clearWorld } from '../environment/dynamicWorld.js';
@@ -10,7 +10,8 @@ const LIGHT_TRIGGER_DIST = 4.0;
 const FLOAT_DURATION = 38.0; // Shortened to end after final credit
 const FINAL_WAIT_DURATION = 10.0;
 const WHITE_LIGHT_POS = new THREE.Vector3(-10, 2, -14);
-const FLOAT_SPEED = 2.5; // Units per second
+const FLOAT_SPEED = 5; // Units per second (used for floating event only)
+// No XR-specific speed calculation here; normal movement is handled by init.js
 
 let isActive = false;
 let isTriggered = false;
@@ -110,9 +111,9 @@ export const endingEvent = {
             floatTimer += 1.0 / 60.0;
             const dt = 1.0 / 60.0;
 
-            // Move player forward (World -Z)
-            const obj = renderer.xr.isPresenting && scene.getObjectByName("dolly") ? scene.getObjectByName("dolly") : camera;
-            obj.position.z -= FLOAT_SPEED * dt;
+                // Move player forward (World -Z) - floating event only
+                const obj = renderer.xr.isPresenting && dolly ? dolly : camera;
+                obj.position.z -= FLOAT_SPEED * dt;
 
             // Animate Scene Objects
             sceneObjects.forEach(obj => {
@@ -184,9 +185,11 @@ export const endingEvent = {
         scene.background = skyTexture;
         scene.fog = null;
 
-        const obj = renderer.xr.isPresenting && scene.getObjectByName("dolly") ? scene.getObjectByName("dolly") : camera;
+        const obj = (renderer.xr.isPresenting && dolly) ? dolly : camera;
         obj.position.set(0, 200, 0);
-        obj.rotation.set(0, 0, 0);
+        if (!renderer.xr.isPresenting) {
+            obj.rotation.set(0, 0, 0);
+        }
 
         if (whiteOverlay) whiteOverlay.material.opacity = 0;
 
@@ -344,18 +347,34 @@ export const endingEvent = {
         });
         sceneObjects = [];
 
-        const obj = renderer.xr.isPresenting ? scene.getObjectByName("dolly") : camera;
-        obj.position.set(0, 7, 0);
-        obj.rotation.set(0, 0, 0);
+        const isXR = renderer.xr.isPresenting && dolly;
+        const obj = isXR ? dolly : camera;
+        
+        // Position player - in XR mode, dolly needs different Y due to camera offset
+        const playerY = isXR ? 1.6 : 7;
+        obj.position.set(0, playerY, 0);
+        if (!isXR) {
+            obj.rotation.set(0, 0, 0);
+        }
 
-        freezePlayerAt(new THREE.Vector3(0, 7, 0));
+        freezePlayerAt(new THREE.Vector3(0, playerY, 0));
+
+        // Add temporary light so corridor is visible
+        const corridorLight = new THREE.PointLight(0xffffff, 1, 20);
+        corridorLight.position.set(0, playerY + 2, -2);
+        corridorLight.name = 'corridorLight';
+        scene.add(corridorLight);
 
         const loader = new GLTFLoader();
         loader.load('models/corridor.glb', (gltf) => {
             corridorModel = gltf.scene;
-            corridorModel.position.set(0, 6, 0);
+            // Position corridor relative to where the player is
+            const corridorY = isXR ? 3 : 6;
+            corridorModel.position.set(0, corridorY, -5);
             scene.add(corridorModel);
-            console.log("Restored Corridor for Finale");
+            console.log("Restored Corridor for Finale - XR mode:", isXR);
+        }, undefined, (error) => {
+            console.error("Failed to load corridor model:", error);
         });
     },
 
@@ -385,6 +404,12 @@ export const endingEvent = {
         if (corridorModel) {
             scene.remove(corridorModel);
             corridorModel = null;
+        }
+
+        // Remove corridor light if exists
+        const corridorLight = scene.getObjectByName('corridorLight');
+        if (corridorLight) {
+            scene.remove(corridorLight);
         }
 
         if (skyTexture) {
